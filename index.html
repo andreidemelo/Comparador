@@ -4,25 +4,537 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperCompare - Economize no Supermercado</title>
+    <title>SuperCompare AI - Economia Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
+        .print-only { display: none; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "recharts": "https://esm.sh/recharts@^3.6.0"
-  }
-}
-</script>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+      }
+    }
+    </script>
 </head>
-<body class="bg-gray-50 text-gray-900">
-    <div id="root"></div>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+    <!-- TELA DE AUTENTICAÇÃO -->
+    <div id="auth-section" class="min-h-screen bg-emerald-600 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+                <h1 class="text-2xl font-black text-gray-800 uppercase tracking-tighter">SuperCompare</h1>
+                <p class="text-gray-400 text-xs font-bold uppercase mt-1">Sua conta segura</p>
+            </div>
+            
+            <div class="flex p-1 bg-gray-50 rounded-xl mb-6">
+                <button id="btn-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all bg-white shadow-sm text-emerald-600">Entrar</button>
+                <button id="btn-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all text-gray-400">Criar Conta</button>
+            </div>
+
+            <form id="form-auth" class="space-y-4">
+                <input type="text" id="auth-username" placeholder="Nome de Usuário" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" required>
+                <input type="password" id="auth-password" placeholder="Senha" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" required>
+                <p id="auth-error" class="hidden text-xs font-bold text-red-500 text-center"></p>
+                <p id="auth-success" class="hidden text-xs font-bold text-emerald-600 text-center"></p>
+                <button type="submit" id="btn-auth-submit" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">Acessar App</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <div id="main-app" class="hidden no-print">
+        <header class="bg-emerald-600 text-white p-4 sticky top-0 z-30 shadow-md">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-black uppercase tracking-tighter flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    SuperCompare
+                </h1>
+                <div class="flex items-center gap-4">
+                    <div class="hidden sm:block text-right">
+                        <p class="text-[10px] font-black uppercase opacity-70 leading-none">Bem-vindo,</p>
+                        <p id="header-user-name" class="text-sm font-bold"></p>
+                    </div>
+                    <button onclick="logout()" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8">
+            <!-- CONSTRUTOR DE LISTA -->
+            <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
+                <h2 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Criar Lista de Compras</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-1">
+                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">1. Categoria</label>
+                        <select id="select-category" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">2. Produto / Marca</label>
+                        <select id="select-product" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer disabled:opacity-50" disabled>
+                            <option value="">Selecione a categoria primeiro</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="w-20">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
+                            <input type="number" id="input-qty" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none">
+                        </div>
+                        <button onclick="addItem()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Add</button>
+                    </div>
+                </div>
+
+                <div id="shopping-list-display" class="mt-8 space-y-2">
+                    <!-- Itens serão injetados aqui -->
+                </div>
+
+                <div id="action-compare" class="hidden mt-10 flex justify-center">
+                    <button id="btn-compare" onclick="runComparison()" class="w-full md:w-auto min-w-[240px] py-4 bg-emerald-600 text-white rounded-2xl uppercase font-black tracking-widest shadow-xl shadow-emerald-50 hover:scale-105 transition-all">Comparar Preços</button>
+                </div>
+            </section>
+
+            <!-- RESULTADOS -->
+            <section id="results-display" class="hidden animate-in space-y-6">
+                <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse" id="table-results">
+                            <!-- Tabela será gerada aqui -->
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4">
+                   <button onclick="window.print()" class="px-8 py-4 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-50">Imprimir Roteiro</button>
+                   <button onclick="saveList()" class="px-8 py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700">Salvar Lista</button>
+                </div>
+            </section>
+
+            <!-- HISTÓRICO -->
+            <section id="history-section" class="hidden pt-8">
+                 <h3 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Listas Anteriores</h3>
+                 <div id="history-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Cards do histórico -->
+                 </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- NOTIFICAÇÃO -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-8 py-4 rounded-full shadow-2xl z-50 transform translate-y-20 transition-transform duration-300">
+      <span id="toast-text" class="text-xs font-black uppercase tracking-widest">Lista Salva!</span>
+    </div>
+
+    <script type="module">
+        import { GoogleGenAI, Type } from "@google/genai";
+
+        // --- CONFIGURAÇÃO E DADOS ---
+        const PRODUCT_STRUCTURE = {
+            "Arroz": ["Tio João 5Kg", "Camil 5kg", "Prato Fino 5kg", "Branco Comum 5kg", "Integral 1kg"],
+            "Feijão": ["Broto Legal 1Kg", "Camil 1Kg", "Kicaldo 1kg", "Carioca 1kg", "Preto 1kg"],
+            "Leite": ["Italac Integral 1L", "Piracanjuba Integral 1L", "Ninho Integral 1L", "Desnatado 1L", "Semidesnatado 1L"],
+            "Café": ["Pilão 500g", "Melitta 500g", "Três Corações 500g", "Gourmet 250g"],
+            "Açúcar": ["União Refinado 1kg", "Caravelas 1kg", "Cristal 1kg", "Demerara 1kg"],
+            "Óleo": ["Liza Soja 900ml", "Soya Soja 900ml", "Gallo Azeite 500ml", "Andorinha 500ml"],
+            "Massas": ["Barilla 500g", "Adria 500g", "Elefante 310g", "Pomarola 340g"],
+            "Higiene": ["Dove 90g", "Colgate 90g", "Pantene 400ml", "Rexona"],
+            "Bebidas": ["Coca-Cola 2L", "Guaraná 2L", "Del Valle 1L", "Heineken Lata"]
+        };
+
+        const MARKET_LOGOS = {
+            'carrefour': 'https://www.google.com/s2/favicons?domain=carrefour.com.br&sz=64',
+            'pão de açúcar': 'https://www.google.com/s2/favicons?domain=paodeacucar.com&sz=64',
+            'extra': 'https://www.google.com/s2/favicons?domain=clubeextra.com.br&sz=64',
+            'assai': 'https://www.google.com/s2/favicons?domain=assai.com.br&sz=64',
+            'atacadão': 'https://www.google.com/s2/favicons?domain=atacadao.com.br&sz=64',
+            'mercado livre': 'https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64'
+        };
+
+        // --- ESTADO DA APLICAÇÃO ---
+        let currentUser = null;
+        let authMode = 'login';
+        let shoppingList = [];
+        let comparisonResults = null;
+
+        // --- INICIALIZAÇÃO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initAuth();
+            populateCategories();
+            checkSession();
+        });
+
+        function checkSession() {
+            const session = localStorage.getItem('supercompare_session');
+            if (session) {
+                currentUser = JSON.parse(session).name;
+                enterApp();
+            }
+        }
+
+        function populateCategories() {
+            const select = document.getElementById('select-category');
+            Object.keys(PRODUCT_STRUCTURE).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', (e) => {
+                const cat = e.target.value;
+                const prodSelect = document.getElementById('select-product');
+                prodSelect.innerHTML = '<option value="">Escolha o produto...</option>';
+                
+                if (cat) {
+                    prodSelect.disabled = false;
+                    PRODUCT_STRUCTURE[cat].forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p;
+                        opt.textContent = p;
+                        prodSelect.appendChild(opt);
+                    });
+                } else {
+                    prodSelect.disabled = true;
+                }
+            });
+        }
+
+        // --- AUTENTICAÇÃO ---
+        window.setAuthMode = (mode) => {
+            authMode = mode;
+            const btnLogin = document.getElementById('btn-tab-login');
+            const btnReg = document.getElementById('btn-tab-register');
+            const submitBtn = document.getElementById('btn-auth-submit');
+            
+            if (mode === 'login') {
+                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all bg-white shadow-sm text-emerald-600";
+                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all text-gray-400";
+                submitBtn.textContent = "Acessar App";
+            } else {
+                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all bg-white shadow-sm text-emerald-600";
+                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all text-gray-400";
+                submitBtn.textContent = "Confirmar Cadastro";
+            }
+        };
+
+        document.getElementById('form-auth').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('auth-username').value;
+            const pass = document.getElementById('auth-password').value;
+            const errEl = document.getElementById('auth-error');
+            const successEl = document.getElementById('auth-success');
+
+            errEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
+
+            if (authMode === 'register') {
+                if (users.find(u => u.name.toLowerCase() === name.toLowerCase())) {
+                    errEl.textContent = "Usuário já existe!";
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+                users.push({ name, password: pass });
+                localStorage.setItem('supercompare_users_db', JSON.stringify(users));
+                successEl.textContent = "Cadastro realizado! Agora faça login.";
+                successEl.classList.remove('hidden');
+                setTimeout(() => setAuthMode('login'), 1000);
+            } else {
+                const user = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.password === pass);
+                if (user) {
+                    currentUser = user.name;
+                    localStorage.setItem('supercompare_session', JSON.stringify({ name: user.name }));
+                    enterApp();
+                } else {
+                    errEl.textContent = "Usuário ou senha incorretos.";
+                    errEl.classList.remove('hidden');
+                }
+            }
+        });
+
+        function enterApp() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('header-user-name').textContent = currentUser;
+            renderHistory();
+        }
+
+        window.logout = () => {
+            localStorage.removeItem('supercompare_session');
+            location.reload();
+        };
+
+        // --- GESTÃO DA LISTA ---
+        window.addItem = () => {
+            const cat = document.getElementById('select-category').value;
+            const prod = document.getElementById('select-product').value;
+            const qty = parseInt(document.getElementById('input-qty').value);
+
+            if (!prod) return;
+
+            shoppingList.push({ id: Date.now().toString(), name: prod, category: cat, quantity: qty });
+            renderShoppingList();
+            
+            // Reset fields
+            document.getElementById('select-product').value = "";
+            document.getElementById('input-qty').value = "1";
+            document.getElementById('results-display').classList.add('hidden');
+        };
+
+        window.removeItem = (id) => {
+            shoppingList = shoppingList.filter(i => i.id !== id);
+            renderShoppingList();
+            document.getElementById('results-display').classList.add('hidden');
+        };
+
+        function renderShoppingList() {
+            const container = document.getElementById('shopping-list-display');
+            container.innerHTML = "";
+            
+            shoppingList.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-3 bg-gray-50 rounded-xl group transition-all hover:bg-white hover:shadow-md border border-transparent hover:border-emerald-100";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-[10px] font-black">${item.quantity}</span>
+                        <span class="text-sm font-bold text-gray-700">${item.name}</span>
+                    </div>
+                    <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('action-compare').classList.toggle('hidden', shoppingList.length === 0);
+        }
+
+        // --- INTEGRAÇÃO IA GEMINI ---
+        window.runComparison = async () => {
+            if (shoppingList.length === 0) return;
+            
+            const btn = document.getElementById('btn-compare');
+            btn.disabled = true;
+            btn.textContent = "Analisando Mercado...";
+            
+            try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const listItems = shoppingList.map(i => `${i.quantity}x ${i.name}`).join(", ");
+                const prompt = `Compare os preços para esta lista de compras em São Paulo/SP: ${listItems}. Considere pelo menos 4 supermercados conhecidos.`;
+
+                const response = await ai.models.generateContent({
+                    model: "gemini-3-flash-preview",
+                    contents: prompt,
+                    config: {
+                        tools: [{ googleSearch: {} }],
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    storeName: { type: Type.STRING },
+                                    totalPrice: { type: Type.NUMBER },
+                                    items: {
+                                        type: Type.ARRAY,
+                                        items: {
+                                            type: Type.OBJECT,
+                                            properties: {
+                                                productName: { type: Type.STRING },
+                                                price: { type: Type.NUMBER }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                comparisonResults = JSON.parse(response.text);
+                renderResultsTable();
+            } catch (err) {
+                console.error(err);
+                alert("Falha na consulta. Verifique sua conexão ou tente mais tarde.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Comparar Preços";
+            }
+        };
+
+        function getStoreLogo(name) {
+            const key = Object.keys(MARKET_LOGOS).find(k => name.toLowerCase().includes(k));
+            return MARKET_LOGOS[key] || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`;
+        }
+
+        function renderResultsTable() {
+            const table = document.getElementById('table-results');
+            const section = document.getElementById('results-display');
+            section.classList.remove('hidden');
+            table.innerHTML = "";
+
+            // Cabeçalho
+            let headerHtml = `<thead class="bg-gray-50/50 border-b border-gray-100"><tr><th class="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Produto</th>`;
+            comparisonResults.forEach(res => {
+                headerHtml += `<th class="p-5 text-center border-l border-gray-100 min-w-[120px]">
+                    <img src="${getStoreLogo(res.storeName)}" class="w-8 h-8 mx-auto mb-2 object-contain rounded shadow-sm bg-white p-1" />
+                    <span class="text-[10px] font-black uppercase text-gray-800">${res.storeName}</span>
+                </th>`;
+            });
+            headerHtml += "</tr></thead>";
+
+            // Corpo
+            let bodyHtml = "<tbody>";
+            let bestMixTotal = 0;
+
+            shoppingList.forEach(item => {
+                let itemMin = Infinity;
+                comparisonResults.forEach(res => {
+                    const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
+                    const price = found ? found.price : (res.totalPrice / shoppingList.length);
+                    if (price < itemMin) itemMin = price;
+                });
+                bestMixTotal += (itemMin * item.quantity);
+
+                bodyHtml += `<tr class="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                    <td class="p-5 text-xs font-bold text-gray-700">${item.name}</td>`;
+                
+                comparisonResults.forEach(res => {
+                    const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
+                    const price = found ? found.price : (res.totalPrice / shoppingList.length);
+                    const isBest = price === itemMin;
+                    bodyHtml += `<td class="p-5 text-center border-l border-gray-50">
+                        <span class="text-xs font-mono font-black px-2 py-1 rounded-full ${isBest ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'text-gray-400 bg-gray-50'}">R$ ${price.toFixed(2)}</span>
+                    </td>`;
+                });
+                bodyHtml += "</tr>";
+            });
+
+            // Totais
+            bodyHtml += `<tr class="bg-emerald-50/50">
+                <td class="p-5 text-[10px] font-black uppercase text-emerald-800">TOTAL POR MERCADO</td>`;
+            const totals = comparisonResults.map(r => r.totalPrice);
+            const minTotal = Math.min(...totals);
+            
+            comparisonResults.forEach(res => {
+                const isWinner = res.totalPrice === minTotal;
+                bodyHtml += `<td class="p-5 text-center border-l border-emerald-100 ${isWinner ? 'bg-emerald-100/40' : ''}">
+                    <div class="text-sm font-mono font-black text-emerald-700">R$ ${res.totalPrice.toFixed(2)}</div>
+                    ${isWinner ? '<span class="text-[8px] font-black uppercase text-emerald-600">Vencedor Geral</span>' : ''}
+                </td>`;
+            });
+            bodyHtml += "</tr>";
+
+            // Mix Economia
+            bodyHtml += `<tr class="bg-emerald-600 text-white">
+                <td class="p-6"><div class="text-[10px] font-black uppercase opacity-70 leading-none mb-1">MAX ECONOMIA</div><div class="text-xs font-bold">Mix de Lojas</div></td>
+                <td colspan="${comparisonResults.length}" class="p-6 text-center border-l border-emerald-700/30">
+                    <div class="text-3xl font-mono font-black">R$ ${bestMixTotal.toFixed(2)}</div>
+                </td>
+            </tr></tbody>`;
+
+            table.innerHTML = headerHtml + bodyHtml;
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- PERSISTÊNCIA ---
+        window.saveList = () => {
+            if (!comparisonResults) return;
+            
+            const history = JSON.parse(localStorage.getItem('supercompare_history') || '[]');
+            const bestMixTotal = shoppingList.reduce((acc, item) => {
+                const prices = comparisonResults.map(res => {
+                    const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
+                    return found ? found.price : (res.totalPrice / shoppingList.length);
+                });
+                return acc + (Math.min(...prices) * item.quantity);
+            }, 0);
+
+            const record = {
+                id: Date.now().toString(),
+                date: new Date().toLocaleDateString('pt-BR'),
+                userName: currentUser,
+                items: JSON.parse(JSON.stringify(shoppingList)),
+                results: JSON.parse(JSON.stringify(comparisonResults)),
+                bestTotal: bestMixTotal
+            };
+
+            history.unshift(record);
+            localStorage.setItem('supercompare_history', JSON.stringify(history.slice(0, 15))); // Manter últimos 15
+            
+            showToast("Lista Salva com Sucesso!");
+            renderHistory();
+        };
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('supercompare_history') || '[]');
+            const container = document.getElementById('history-grid');
+            const section = document.getElementById('history-section');
+            
+            if (history.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = "";
+
+            history.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer";
+                card.onclick = () => loadFromHistory(item);
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                       <div>
+                          <p class="text-[9px] font-black text-gray-300 uppercase leading-none mb-1">${item.date}</p>
+                          <p class="text-sm font-black text-gray-800 uppercase tracking-tighter">${item.userName}</p>
+                       </div>
+                    </div>
+                    <div class="text-2xl font-mono font-black text-emerald-600 mb-4">R$ ${item.bestTotal.toFixed(2)}</div>
+                    <div class="text-[10px] font-black uppercase text-gray-400 group-hover:text-emerald-500 transition-colors">Revisar Detalhes →</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function loadFromHistory(record) {
+            shoppingList = record.items;
+            comparisonResults = record.results;
+            renderShoppingList();
+            renderResultsTable();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').textContent = text;
+            toast.classList.remove('translate-y-20');
+            toast.classList.add('translate-y-0');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0');
+                toast.classList.add('translate-y-20');
+            }, 3000);
+        }
+
+        function initAuth() {
+            setAuthMode('login');
+        }
+
+    </script>
 </body>
 </html>
