@@ -16,6 +16,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
         .print-only { display: none; }
+        .admin-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .admin-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
     </style>
     <script type="importmap">
     {
@@ -57,11 +59,12 @@
     <div id="main-app" class="hidden no-print">
         <header class="bg-emerald-600 text-white p-4 sticky top-0 z-30 shadow-md">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
-                <h1 class="text-xl font-black uppercase tracking-tighter flex items-center">
+                <h1 class="text-xl font-black uppercase tracking-tighter flex items-center cursor-pointer" onclick="showView('home')">
                     <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                     SuperCompare
                 </h1>
                 <div class="flex items-center gap-4">
+                    <button id="nav-admin" onclick="showView('admin-menu')" class="hidden bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors">Painel Admin</button>
                     <div class="hidden sm:block text-right">
                         <p class="text-[10px] font-black uppercase opacity-70 leading-none">Bem-vindo,</p>
                         <p id="header-user-name" class="text-sm font-bold"></p>
@@ -74,85 +77,214 @@
         </header>
 
         <main class="max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8">
-            <!-- CONSTRUTOR DE LISTA -->
-            <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
-                <h2 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Criar Lista de Compras</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div class="md:col-span-1">
-                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">1. Categoria</label>
-                        <select id="select-category" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer">
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">2. Produto / Marca</label>
-                        <select id="select-product" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer disabled:opacity-50" disabled>
-                            <option value="">Selecione a categoria primeiro</option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2">
-                        <div class="w-20">
-                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
-                            <input type="number" id="input-qty" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none">
+            
+            <!-- VIEW: HOME -->
+            <div id="view-home" class="space-y-8">
+                <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <h2 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Criar Lista de Compras</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div class="md:col-span-1">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">1. Categoria</label>
+                            <select id="select-category" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer">
+                                <option value="">Selecione...</option>
+                            </select>
                         </div>
-                        <button onclick="addItem()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Add</button>
+                        <div class="md:col-span-2">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">2. Produto / Marca</label>
+                            <select id="select-product" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer disabled:opacity-50" disabled>
+                                <option value="">Selecione a categoria primeiro</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="w-20">
+                                <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
+                                <input type="number" id="input-qty" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none">
+                            </div>
+                            <button onclick="addItem()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Add</button>
+                        </div>
                     </div>
-                </div>
 
-                <div id="shopping-list-display" class="mt-8 space-y-2">
-                    <!-- Itens serão injetados aqui -->
-                </div>
+                    <div id="shopping-list-display" class="mt-8 space-y-2"></div>
 
-                <div id="action-compare" class="hidden mt-10 flex justify-center">
-                    <button id="btn-compare" onclick="runComparison()" class="w-full md:w-auto min-w-[240px] py-4 bg-emerald-600 text-white rounded-2xl uppercase font-black tracking-widest shadow-xl shadow-emerald-50 hover:scale-105 transition-all">Comparar Preços</button>
-                </div>
-            </section>
+                    <div id="action-compare" class="hidden mt-10 flex justify-center">
+                        <button id="btn-compare" onclick="runComparison()" class="w-full md:w-auto min-w-[240px] py-4 bg-emerald-600 text-white rounded-2xl uppercase font-black tracking-widest shadow-xl shadow-emerald-50 hover:scale-105 transition-all">Comparar Preços</button>
+                    </div>
+                </section>
 
-            <!-- RESULTADOS -->
-            <section id="results-display" class="hidden animate-in space-y-6">
-                <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                    <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-full text-left border-collapse" id="table-results">
-                            <!-- Tabela será gerada aqui -->
+                <!-- RESULTADOS -->
+                <section id="results-display" class="hidden animate-in space-y-6">
+                    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse" id="table-results"></table>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-4">
+                       <button onclick="window.print()" class="px-8 py-4 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-50">Imprimir Roteiro</button>
+                       <button onclick="saveList()" class="px-8 py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700">Salvar Lista</button>
+                    </div>
+                </section>
+
+                <!-- HISTÓRICO -->
+                <section id="history-section" class="hidden pt-8">
+                     <h3 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Listas Anteriores</h3>
+                     <div id="history-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+                </section>
+            </div>
+
+            <!-- VIEW: ADMIN MENU -->
+            <div id="view-admin-menu" class="hidden animate-in space-y-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tighter">Painel de Controle</h2>
+                    <button onclick="showView('home')" class="text-sm font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl hover:bg-emerald-100 transition-colors">Voltar Home</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Gerenciar Mercados -->
+                    <button onclick="showView('admin-markets')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        </div>
+                        <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Mercados</span>
+                        <span class="text-xs font-bold text-gray-400 mt-2">Cadastrar e gerenciar lojas</span>
+                    </button>
+
+                    <!-- Gerenciar Categorias -->
+                    <button onclick="showView('admin-categories')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
+                        <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M11 7h.01M11 11h.01M11 15h.01M15 7h.01M15 11h.01M15 15h.01M19 7h.01M19 11h.01M19 15h.01M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                        </div>
+                        <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Categorias</span>
+                        <span class="text-xs font-bold text-gray-400 mt-2">Organizar por tipo</span>
+                    </button>
+
+                    <!-- Gerenciar Produtos -->
+                    <button onclick="showView('admin-products')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
+                        <div class="w-16 h-16 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                        </div>
+                        <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Produtos</span>
+                        <span class="text-xs font-bold text-gray-400 mt-2">Itens e marcas</span>
+                    </button>
+
+                    <!-- Gerenciar Preços -->
+                    <button onclick="showView('admin-prices')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
+                        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Preços</span>
+                        <span class="text-xs font-bold text-gray-400 mt-2">Valores por mercado</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW: ADMIN MARKETS -->
+            <div id="view-admin-markets" class="hidden animate-in space-y-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="showView('admin-menu')" class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Mercados</h2>
+                </div>
+                <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <form id="form-admin-market" class="flex gap-4">
+                        <input type="text" id="input-admin-market-name" placeholder="Nome do Mercado (ex: Carrefour)" class="flex-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        <button type="submit" class="px-6 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar</button>
+                    </form>
+                    <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
+                                <tr><th class="p-4">Nome do Mercado</th><th class="p-4 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody id="table-admin-markets" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
                         </table>
                     </div>
-                </div>
+                </section>
+            </div>
 
-                <div class="flex flex-wrap justify-center gap-4">
-                   <button onclick="window.print()" class="px-8 py-4 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-50">Imprimir Roteiro</button>
-                   <button onclick="saveList()" class="px-8 py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700">Salvar Lista</button>
+            <!-- VIEW: ADMIN CATEGORIES -->
+            <div id="view-admin-categories" class="hidden animate-in space-y-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="showView('admin-menu')" class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Categorias</h2>
                 </div>
-            </section>
+                <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <form id="form-admin-category" class="flex gap-4">
+                        <input type="text" id="input-admin-category-name" placeholder="Nova Categoria (ex: Carnes)" class="flex-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        <button type="submit" class="px-6 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar</button>
+                    </form>
+                    <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
+                                <tr><th class="p-4">Nome da Categoria</th><th class="p-4 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody id="table-admin-categories" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
-            <!-- HISTÓRICO -->
-            <section id="history-section" class="hidden pt-8">
-                 <h3 class="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Listas Anteriores</h3>
-                 <div id="history-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Cards do histórico -->
-                 </div>
-            </section>
+            <!-- VIEW: ADMIN PRODUCTS -->
+            <div id="view-admin-products" class="hidden animate-in space-y-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="showView('admin-menu')" class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Produtos</h2>
+                </div>
+                <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <form id="form-admin-product" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <select id="select-admin-product-category" class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required></select>
+                        <input type="text" id="input-admin-product-name" placeholder="Nome do Produto (ex: Arroz Camil 5kg)" class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        <button type="submit" class="bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Adicionar Produto</button>
+                    </form>
+                    <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
+                                <tr><th class="p-4">Categoria</th><th class="p-4">Produto</th><th class="p-4 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody id="table-admin-products" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW: ADMIN PRICES -->
+            <div id="view-admin-prices" class="hidden animate-in space-y-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="showView('admin-menu')" class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Preços</h2>
+                </div>
+                <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <form id="form-admin-price" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="select-admin-price-market" class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required></select>
+                        <select id="select-admin-price-product" class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required></select>
+                        <input type="number" step="0.01" id="input-admin-price-value" placeholder="R$ 0,00" class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        <button type="submit" class="bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar Preço</button>
+                    </form>
+                    <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
+                                <tr><th class="p-4">Mercado</th><th class="p-4">Produto</th><th class="p-4">Preço</th><th class="p-4 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody id="table-admin-prices" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
     <!-- NOTIFICAÇÃO -->
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-8 py-4 rounded-full shadow-2xl z-50 transform translate-y-20 transition-transform duration-300">
-      <span id="toast-text" class="text-xs font-black uppercase tracking-widest">Lista Salva!</span>
+      <span id="toast-text" class="text-xs font-black uppercase tracking-widest">Ação Realizada!</span>
     </div>
 
     <script type="module">
         import { GoogleGenAI, Type } from "@google/genai";
 
-        // --- CONFIGURAÇÃO E DADOS ---
-        const PRODUCT_STRUCTURE = {
-            "Arroz": ["Tio João 5Kg", "Camil 5kg", "Prato Fino 5kg", "Branco Comum 5kg", "Integral 1kg"],
-            "Feijão": ["Broto Legal 1Kg", "Camil 1Kg", "Kicaldo 1kg", "Carioca 1kg", "Preto 1kg"],
-            "Leite": ["Italac Integral 1L", "Piracanjuba Integral 1L", "Ninho Integral 1L", "Desnatado 1L", "Semidesnatado 1L"],
-            "Café": ["Pilão 500g", "Melitta 500g", "Três Corações 500g", "Gourmet 250g"],
-            "Açúcar": ["União Refinado 1kg", "Caravelas 1kg", "Cristal 1kg", "Demerara 1kg"],
-            "Óleo": ["Liza Soja 900ml", "Soya Soja 900ml", "Gallo Azeite 500ml", "Andorinha 500ml"],
-            "Massas": ["Barilla 500g", "Adria 500g", "Elefante 310g", "Pomarola 340g"],
-            "Higiene": ["Dove 90g", "Colgate 90g", "Pantene 400ml", "Rexona"],
-            "Bebidas": ["Coca-Cola 2L", "Guaraná 2L", "Del Valle 1L", "Heineken Lata"]
+        // --- DADOS PADRÃO ---
+        const DEFAULT_PRODUCT_STRUCTURE = {
+            "Arroz": ["Tio João 5Kg", "Camil 5kg", "Prato Fino 5kg"],
+            "Feijão": ["Broto Legal 1Kg", "Camil 1Kg", "Kicaldo 1kg"],
+            "Leite": ["Italac Integral 1L", "Piracanjuba 1L", "Ninho 1L"],
+            "Café": ["Pilão 500g", "Melitta 500g", "Três Corações 500g"],
+            "Bebidas": ["Coca-Cola 2L", "Guaraná 2L", "Heineken Lata"]
         };
 
         const MARKET_LOGOS = {
@@ -160,11 +292,10 @@
             'pão de açúcar': 'https://www.google.com/s2/favicons?domain=paodeacucar.com&sz=64',
             'extra': 'https://www.google.com/s2/favicons?domain=clubeextra.com.br&sz=64',
             'assai': 'https://www.google.com/s2/favicons?domain=assai.com.br&sz=64',
-            'atacadão': 'https://www.google.com/s2/favicons?domain=atacadao.com.br&sz=64',
-            'mercado livre': 'https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64'
+            'atacadão': 'https://www.google.com/s2/favicons?domain=atacadao.com.br&sz=64'
         };
 
-        // --- ESTADO DA APLICAÇÃO ---
+        // --- ESTADO ---
         let currentUser = null;
         let authMode = 'login';
         let shoppingList = [];
@@ -172,10 +303,35 @@
 
         // --- INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
-            initAuth();
-            populateCategories();
+            setupAdminUser();
+            initData();
             checkSession();
+            renderShoppingDropdowns();
         });
+
+        function setupAdminUser() {
+            const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
+            if (!users.find(u => u.name === 'administrador')) {
+                users.push({ name: 'administrador', password: 'Mu@300413' });
+                localStorage.setItem('supercompare_users_db', JSON.stringify(users));
+            }
+        }
+
+        function initData() {
+            if (!localStorage.getItem('supercompare_markets')) {
+                localStorage.setItem('supercompare_markets', JSON.stringify(['Carrefour', 'Pão de Açúcar', 'Extra', 'Assai', 'Atacadão']));
+            }
+            if (!localStorage.getItem('supercompare_categories')) {
+                localStorage.setItem('supercompare_categories', JSON.stringify(Object.keys(DEFAULT_PRODUCT_STRUCTURE)));
+            }
+            if (!localStorage.getItem('supercompare_products')) {
+                const prods = [];
+                Object.entries(DEFAULT_PRODUCT_STRUCTURE).forEach(([cat, names]) => {
+                    names.forEach(name => prods.push({ id: Math.random().toString(36).substr(2, 9), category: cat, name }));
+                });
+                localStorage.setItem('supercompare_products', JSON.stringify(prods));
+            }
+        }
 
         function checkSession() {
             const session = localStorage.getItem('supercompare_session');
@@ -185,48 +341,34 @@
             }
         }
 
-        function populateCategories() {
-            const select = document.getElementById('select-category');
-            Object.keys(PRODUCT_STRUCTURE).forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat;
-                select.appendChild(opt);
-            });
+        // --- NAVEGAÇÃO ---
+        window.showView = (viewId) => {
+            document.querySelectorAll('#main-app main > div').forEach(div => div.classList.add('hidden'));
+            const target = document.getElementById(`view-${viewId}`);
+            if (target) {
+                target.classList.remove('hidden');
+                // Refresh data based on view
+                if (viewId === 'admin-markets') renderAdminMarkets();
+                if (viewId === 'admin-categories') renderAdminCategories();
+                if (viewId === 'admin-products') renderAdminProducts();
+                if (viewId === 'admin-prices') renderAdminPrices();
+                if (viewId === 'home') renderShoppingDropdowns();
+            }
+        };
 
-            select.addEventListener('change', (e) => {
-                const cat = e.target.value;
-                const prodSelect = document.getElementById('select-product');
-                prodSelect.innerHTML = '<option value="">Escolha o produto...</option>';
-                
-                if (cat) {
-                    prodSelect.disabled = false;
-                    PRODUCT_STRUCTURE[cat].forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = p;
-                        opt.textContent = p;
-                        prodSelect.appendChild(opt);
-                    });
-                } else {
-                    prodSelect.disabled = true;
-                }
-            });
-        }
-
-        // --- AUTENTICAÇÃO ---
+        // --- AUTH ---
         window.setAuthMode = (mode) => {
             authMode = mode;
             const btnLogin = document.getElementById('btn-tab-login');
             const btnReg = document.getElementById('btn-tab-register');
             const submitBtn = document.getElementById('btn-auth-submit');
-            
             if (mode === 'login') {
-                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all bg-white shadow-sm text-emerald-600";
-                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all text-gray-400";
+                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600";
+                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
                 submitBtn.textContent = "Acessar App";
             } else {
-                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all bg-white shadow-sm text-emerald-600";
-                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all text-gray-400";
+                btnReg.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600";
+                btnLogin.className = "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
                 submitBtn.textContent = "Confirmar Cadastro";
             }
         };
@@ -236,11 +378,6 @@
             const name = document.getElementById('auth-username').value;
             const pass = document.getElementById('auth-password').value;
             const errEl = document.getElementById('auth-error');
-            const successEl = document.getElementById('auth-success');
-
-            errEl.classList.add('hidden');
-            successEl.classList.add('hidden');
-
             const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
 
             if (authMode === 'register') {
@@ -251,9 +388,8 @@
                 }
                 users.push({ name, password: pass });
                 localStorage.setItem('supercompare_users_db', JSON.stringify(users));
-                successEl.textContent = "Cadastro realizado! Agora faça login.";
-                successEl.classList.remove('hidden');
-                setTimeout(() => setAuthMode('login'), 1000);
+                showToast("Cadastro realizado!");
+                setAuthMode('login');
             } else {
                 const user = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.password === pass);
                 if (user) {
@@ -261,7 +397,7 @@
                     localStorage.setItem('supercompare_session', JSON.stringify({ name: user.name }));
                     enterApp();
                 } else {
-                    errEl.textContent = "Usuário ou senha incorretos.";
+                    errEl.textContent = "Dados incorretos.";
                     errEl.classList.remove('hidden');
                 }
             }
@@ -271,6 +407,8 @@
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('header-user-name').textContent = currentUser;
+            document.getElementById('nav-admin').classList.toggle('hidden', currentUser !== 'administrador');
+            showView('home');
             renderHistory();
         }
 
@@ -279,18 +417,177 @@
             location.reload();
         };
 
-        // --- GESTÃO DA LISTA ---
+        // --- ADMIN: MARKETS ---
+        function renderAdminMarkets() {
+            const markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+            const table = document.getElementById('table-admin-markets');
+            table.innerHTML = markets.map(m => `
+                <tr>
+                    <td class="p-4">${m}</td>
+                    <td class="p-4 text-right"><button onclick="deleteMarket('${m}')" class="text-red-500 hover:underline">Remover</button></td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('form-admin-market').onsubmit = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('input-admin-market-name').value;
+            const markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+            if (!markets.includes(name)) {
+                markets.push(name);
+                localStorage.setItem('supercompare_markets', JSON.stringify(markets));
+                renderAdminMarkets();
+                showToast("Mercado Salvo!");
+            }
+            e.target.reset();
+        };
+
+        window.deleteMarket = (name) => {
+            let markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+            markets = markets.filter(m => m !== name);
+            localStorage.setItem('supercompare_markets', JSON.stringify(markets));
+            renderAdminMarkets();
+        };
+
+        // --- ADMIN: CATEGORIES ---
+        function renderAdminCategories() {
+            const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
+            const table = document.getElementById('table-admin-categories');
+            table.innerHTML = cats.map(c => `
+                <tr>
+                    <td class="p-4">${c}</td>
+                    <td class="p-4 text-right"><button onclick="deleteCategory('${c}')" class="text-red-500 hover:underline">Remover</button></td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('form-admin-category').onsubmit = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('input-admin-category-name').value;
+            const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
+            if (!cats.includes(name)) {
+                cats.push(name);
+                localStorage.setItem('supercompare_categories', JSON.stringify(cats));
+                renderAdminCategories();
+                showToast("Categoria Salva!");
+            }
+            e.target.reset();
+        };
+
+        window.deleteCategory = (name) => {
+            let cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
+            cats = cats.filter(c => c !== name);
+            localStorage.setItem('supercompare_categories', JSON.stringify(cats));
+            renderAdminCategories();
+        };
+
+        // --- ADMIN: PRODUCTS ---
+        function renderAdminProducts() {
+            const prods = JSON.parse(localStorage.getItem('supercompare_products') || '[]');
+            const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
+            const table = document.getElementById('table-admin-products');
+            const selectCat = document.getElementById('select-admin-product-category');
+            
+            selectCat.innerHTML = '<option value="">Selecionar Categoria</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            table.innerHTML = prods.map(p => `
+                <tr>
+                    <td class="p-4"><span class="px-2 py-1 bg-gray-100 rounded text-[10px] uppercase">${p.category}</span></td>
+                    <td class="p-4">${p.name}</td>
+                    <td class="p-4 text-right"><button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline">Remover</button></td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('form-admin-product').onsubmit = (e) => {
+            e.preventDefault();
+            const cat = document.getElementById('select-admin-product-category').value;
+            const name = document.getElementById('input-admin-product-name').value;
+            const prods = JSON.parse(localStorage.getItem('supercompare_products') || '[]');
+            prods.push({ id: Math.random().toString(36).substr(2, 9), category: cat, name });
+            localStorage.setItem('supercompare_products', JSON.stringify(prods));
+            renderAdminProducts();
+            showToast("Produto Adicionado!");
+            e.target.reset();
+        };
+
+        window.deleteProduct = (id) => {
+            let prods = JSON.parse(localStorage.getItem('supercompare_products') || '[]');
+            prods = prods.filter(p => p.id !== id);
+            localStorage.setItem('supercompare_products', JSON.stringify(prods));
+            renderAdminProducts();
+        };
+
+        // --- ADMIN: PRICES ---
+        function renderAdminPrices() {
+            const prices = JSON.parse(localStorage.getItem('supercompare_manual_prices') || '[]');
+            const markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+            const prods = JSON.parse(localStorage.getItem('supercompare_products') || '[]');
+            
+            const table = document.getElementById('table-admin-prices');
+            const selectMarket = document.getElementById('select-admin-price-market');
+            const selectProd = document.getElementById('select-admin-price-product');
+
+            selectMarket.innerHTML = '<option value="">Selecionar Mercado</option>' + markets.map(m => `<option value="${m}">${m}</option>`).join('');
+            selectProd.innerHTML = '<option value="">Selecionar Produto</option>' + prods.map(p => `<option value="${p.name}">${p.name} (${p.category})</option>`).join('');
+
+            table.innerHTML = prices.map(item => `
+                <tr>
+                    <td class="p-4">${item.market}</td>
+                    <td class="p-4">${item.product}</td>
+                    <td class="p-4 font-mono">R$ ${item.price.toFixed(2)}</td>
+                    <td class="p-4 text-right"><button onclick="deleteManualPrice('${item.id}')" class="text-red-500 hover:underline">Remover</button></td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('form-admin-price').onsubmit = (e) => {
+            e.preventDefault();
+            const market = document.getElementById('select-admin-price-market').value;
+            const product = document.getElementById('select-admin-price-product').value;
+            const price = parseFloat(document.getElementById('input-admin-price-value').value);
+
+            const manualData = JSON.parse(localStorage.getItem('supercompare_manual_prices') || '[]');
+            manualData.push({ id: Date.now().toString(), market, product, price });
+            localStorage.setItem('supercompare_manual_prices', JSON.stringify(manualData));
+            renderAdminPrices();
+            showToast("Preço Salvo!");
+            e.target.reset();
+        };
+
+        window.deleteManualPrice = (id) => {
+            let manualData = JSON.parse(localStorage.getItem('supercompare_manual_prices') || '[]');
+            manualData = manualData.filter(d => d.id !== id);
+            localStorage.setItem('supercompare_manual_prices', JSON.stringify(manualData));
+            renderAdminPrices();
+        };
+
+        // --- HOME: SHOPPING LIST ---
+        function renderShoppingDropdowns() {
+            const selectCat = document.getElementById('select-category');
+            const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
+            selectCat.innerHTML = '<option value="">Selecione...</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            selectCat.onchange = (e) => {
+                const cat = e.target.value;
+                const selectProd = document.getElementById('select-product');
+                if (cat) {
+                    const prods = JSON.parse(localStorage.getItem('supercompare_products') || '[]').filter(p => p.category === cat);
+                    selectProd.innerHTML = '<option value="">Escolher produto...</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                    selectProd.disabled = false;
+                } else {
+                    selectProd.innerHTML = '<option value="">Selecione a categoria primeiro</option>';
+                    selectProd.disabled = true;
+                }
+            };
+        }
+
         window.addItem = () => {
             const cat = document.getElementById('select-category').value;
             const prod = document.getElementById('select-product').value;
             const qty = parseInt(document.getElementById('input-qty').value);
-
             if (!prod) return;
-
             shoppingList.push({ id: Date.now().toString(), name: prod, category: cat, quantity: qty });
             renderShoppingList();
-            
-            // Reset fields
             document.getElementById('select-product').value = "";
             document.getElementById('input-qty').value = "1";
             document.getElementById('results-display').classList.add('hidden');
@@ -304,38 +601,32 @@
 
         function renderShoppingList() {
             const container = document.getElementById('shopping-list-display');
-            container.innerHTML = "";
-            
-            shoppingList.forEach(item => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between p-3 bg-gray-50 rounded-xl group transition-all hover:bg-white hover:shadow-md border border-transparent hover:border-emerald-100";
-                div.innerHTML = `
+            container.innerHTML = shoppingList.map(item => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-transparent hover:border-emerald-100 hover:bg-white hover:shadow-md transition-all">
                     <div class="flex items-center gap-3">
                         <span class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-[10px] font-black">${item.quantity}</span>
                         <span class="text-sm font-bold text-gray-700">${item.name}</span>
                     </div>
-                    <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
+                    <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-red-500">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
-                `;
-                container.appendChild(div);
-            });
-
+                </div>
+            `).join('');
             document.getElementById('action-compare').classList.toggle('hidden', shoppingList.length === 0);
         }
 
-        // --- INTEGRAÇÃO IA GEMINI ---
+        // --- COMPARISON ---
         window.runComparison = async () => {
-            if (shoppingList.length === 0) return;
-            
             const btn = document.getElementById('btn-compare');
             btn.disabled = true;
-            btn.textContent = "Analisando Mercado...";
-            
+            btn.textContent = "Pesquisando Preços...";
             try {
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const listItems = shoppingList.map(i => `${i.quantity}x ${i.name}`).join(", ");
-                const prompt = `Compare os preços para esta lista de compras em São Paulo/SP: ${listItems}. Considere pelo menos 4 supermercados conhecidos.`;
+                const manualData = JSON.parse(localStorage.getItem('supercompare_manual_prices') || '[]');
+                const manualContext = manualData.length > 0 ? `Priorize estes preços reais cadastrados no sistema se houver correspondência exata de produto: ${JSON.stringify(manualData)}.` : "";
+
+                const prompt = `Compare os preços em São Paulo/SP para os itens: ${listItems}. Use pelo menos 4 mercados famosos. ${manualContext}`;
 
                 const response = await ai.models.generateContent({
                     model: "gemini-3-flash-preview",
@@ -370,171 +661,115 @@
                 renderResultsTable();
             } catch (err) {
                 console.error(err);
-                alert("Falha na consulta. Verifique sua conexão ou tente mais tarde.");
+                alert("Erro ao comparar. Verifique a chave de API.");
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Comparar Preços";
             }
         };
 
-        function getStoreLogo(name) {
+        function getLogo(name) {
             const key = Object.keys(MARKET_LOGOS).find(k => name.toLowerCase().includes(k));
             return MARKET_LOGOS[key] || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`;
         }
 
         function renderResultsTable() {
             const table = document.getElementById('table-results');
-            const section = document.getElementById('results-display');
-            section.classList.remove('hidden');
-            table.innerHTML = "";
-
-            // Cabeçalho
-            let headerHtml = `<thead class="bg-gray-50/50 border-b border-gray-100"><tr><th class="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Produto</th>`;
+            document.getElementById('results-display').classList.remove('hidden');
+            
+            let header = `<thead class="bg-gray-50 border-b border-gray-100"><tr><th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>`;
             comparisonResults.forEach(res => {
-                headerHtml += `<th class="p-5 text-center border-l border-gray-100 min-w-[120px]">
-                    <img src="${getStoreLogo(res.storeName)}" class="w-8 h-8 mx-auto mb-2 object-contain rounded shadow-sm bg-white p-1" />
+                header += `<th class="p-5 text-center border-l border-gray-100 min-w-[120px]">
+                    <img src="${getLogo(res.storeName)}" class="w-8 h-8 mx-auto mb-2 bg-white p-1 rounded">
                     <span class="text-[10px] font-black uppercase text-gray-800">${res.storeName}</span>
                 </th>`;
             });
-            headerHtml += "</tr></thead>";
+            header += "</tr></thead>";
 
-            // Corpo
-            let bodyHtml = "<tbody>";
+            let body = "<tbody>";
             let bestMixTotal = 0;
 
             shoppingList.forEach(item => {
                 let itemMin = Infinity;
                 comparisonResults.forEach(res => {
                     const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
-                    const price = found ? found.price : (res.totalPrice / shoppingList.length);
-                    if (price < itemMin) itemMin = price;
+                    const p = found ? found.price : (res.totalPrice / shoppingList.length);
+                    if (p < itemMin) itemMin = p;
                 });
                 bestMixTotal += (itemMin * item.quantity);
 
-                bodyHtml += `<tr class="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                body += `<tr class="border-b border-gray-50 hover:bg-gray-50/50">
                     <td class="p-5 text-xs font-bold text-gray-700">${item.name}</td>`;
-                
                 comparisonResults.forEach(res => {
                     const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
                     const price = found ? found.price : (res.totalPrice / shoppingList.length);
                     const isBest = price === itemMin;
-                    bodyHtml += `<td class="p-5 text-center border-l border-gray-50">
-                        <span class="text-xs font-mono font-black px-2 py-1 rounded-full ${isBest ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'text-gray-400 bg-gray-50'}">R$ ${price.toFixed(2)}</span>
+                    body += `<td class="p-5 text-center border-l border-gray-50">
+                        <span class="text-xs font-mono font-black px-2 py-1 rounded-full ${isBest ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">R$ ${price.toFixed(2)}</span>
                     </td>`;
                 });
-                bodyHtml += "</tr>";
+                body += "</tr>";
             });
 
-            // Totais
-            bodyHtml += `<tr class="bg-emerald-50/50">
-                <td class="p-5 text-[10px] font-black uppercase text-emerald-800">TOTAL POR MERCADO</td>`;
-            const totals = comparisonResults.map(r => r.totalPrice);
-            const minTotal = Math.min(...totals);
-            
-            comparisonResults.forEach(res => {
-                const isWinner = res.totalPrice === minTotal;
-                bodyHtml += `<td class="p-5 text-center border-l border-emerald-100 ${isWinner ? 'bg-emerald-100/40' : ''}">
-                    <div class="text-sm font-mono font-black text-emerald-700">R$ ${res.totalPrice.toFixed(2)}</div>
-                    ${isWinner ? '<span class="text-[8px] font-black uppercase text-emerald-600">Vencedor Geral</span>' : ''}
-                </td>`;
-            });
-            bodyHtml += "</tr>";
-
-            // Mix Economia
-            bodyHtml += `<tr class="bg-emerald-600 text-white">
-                <td class="p-6"><div class="text-[10px] font-black uppercase opacity-70 leading-none mb-1">MAX ECONOMIA</div><div class="text-xs font-bold">Mix de Lojas</div></td>
-                <td colspan="${comparisonResults.length}" class="p-6 text-center border-l border-emerald-700/30">
-                    <div class="text-3xl font-mono font-black">R$ ${bestMixTotal.toFixed(2)}</div>
-                </td>
-            </tr></tbody>`;
-
-            table.innerHTML = headerHtml + bodyHtml;
-            section.scrollIntoView({ behavior: 'smooth' });
+            body += `<tr class="bg-emerald-600 text-white"><td class="p-6 font-black uppercase text-xs">Mix Melhor Preço</td><td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${bestMixTotal.toFixed(2)}</td></tr></tbody>`;
+            table.innerHTML = header + body;
+            document.getElementById('results-display').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // --- PERSISTÊNCIA ---
+        // --- HISTORY & UTILS ---
         window.saveList = () => {
-            if (!comparisonResults) return;
-            
             const history = JSON.parse(localStorage.getItem('supercompare_history') || '[]');
-            const bestMixTotal = shoppingList.reduce((acc, item) => {
+            history.unshift({
+                id: Date.now().toString(),
+                date: new Date().toLocaleDateString('pt-BR'),
+                userName: currentUser,
+                items: shoppingList,
+                results: comparisonResults,
+                bestTotal: calculateMixTotal()
+            });
+            localStorage.setItem('supercompare_history', JSON.stringify(history.slice(0, 10)));
+            showToast("Lista Salva!");
+            renderHistory();
+        };
+
+        function calculateMixTotal() {
+            return shoppingList.reduce((acc, item) => {
                 const prices = comparisonResults.map(res => {
                     const found = res.items.find(pi => pi.productName.toLowerCase().includes(item.name.toLowerCase()));
                     return found ? found.price : (res.totalPrice / shoppingList.length);
                 });
                 return acc + (Math.min(...prices) * item.quantity);
             }, 0);
-
-            const record = {
-                id: Date.now().toString(),
-                date: new Date().toLocaleDateString('pt-BR'),
-                userName: currentUser,
-                items: JSON.parse(JSON.stringify(shoppingList)),
-                results: JSON.parse(JSON.stringify(comparisonResults)),
-                bestTotal: bestMixTotal
-            };
-
-            history.unshift(record);
-            localStorage.setItem('supercompare_history', JSON.stringify(history.slice(0, 15))); // Manter últimos 15
-            
-            showToast("Lista Salva com Sucesso!");
-            renderHistory();
-        };
+        }
 
         function renderHistory() {
             const history = JSON.parse(localStorage.getItem('supercompare_history') || '[]');
-            const container = document.getElementById('history-grid');
+            const grid = document.getElementById('history-grid');
             const section = document.getElementById('history-section');
-            
-            if (history.length === 0) {
-                section.classList.add('hidden');
-                return;
-            }
-
+            if (history.length === 0) { section.classList.add('hidden'); return; }
             section.classList.remove('hidden');
-            container.innerHTML = "";
-
-            history.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer";
-                card.onclick = () => loadFromHistory(item);
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                       <div>
-                          <p class="text-[9px] font-black text-gray-300 uppercase leading-none mb-1">${item.date}</p>
-                          <p class="text-sm font-black text-gray-800 uppercase tracking-tighter">${item.userName}</p>
-                       </div>
-                    </div>
-                    <div class="text-2xl font-mono font-black text-emerald-600 mb-4">R$ ${item.bestTotal.toFixed(2)}</div>
-                    <div class="text-[10px] font-black uppercase text-gray-400 group-hover:text-emerald-500 transition-colors">Revisar Detalhes →</div>
-                `;
-                container.appendChild(card);
-            });
+            grid.innerHTML = history.map(item => `
+                <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer" onclick="loadList(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <p class="text-[9px] font-black text-gray-300 uppercase">${item.date} - ${item.userName}</p>
+                    <div class="text-2xl font-mono font-black text-emerald-600">R$ ${item.bestTotal.toFixed(2)}</div>
+                </div>
+            `).join('');
         }
 
-        function loadFromHistory(record) {
-            shoppingList = record.items;
-            comparisonResults = record.results;
+        window.loadList = (item) => {
+            shoppingList = item.items;
+            comparisonResults = item.results;
             renderShoppingList();
             renderResultsTable();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        };
 
         function showToast(text) {
-            const toast = document.getElementById('toast');
+            const t = document.getElementById('toast');
             document.getElementById('toast-text').textContent = text;
-            toast.classList.remove('translate-y-20');
-            toast.classList.add('translate-y-0');
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0');
-                toast.classList.add('translate-y-20');
-            }, 3000);
+            t.classList.remove('translate-y-20');
+            setTimeout(() => t.classList.add('translate-y-20'), 3000);
         }
-
-        function initAuth() {
-            setAuthMode('login');
-        }
-
     </script>
 </body>
 </html>
