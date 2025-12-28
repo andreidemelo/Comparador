@@ -1,0 +1,7 @@
+{
+  "name": "SuperCompare - Comparador de Preços",
+  "description": "Uma ferramenta inteligente para criar listas de compras e comparar preços em tempo real nos principais supermercados usando IA.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
