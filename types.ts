@@ -20,7 +20,7 @@ export interface ComparisonResult {
   isCheapest?: boolean;
 }
 
-export interface GroundingSource {
-  title: string;
-  uri: string;
+export interface UserCredentials {
+  name: string;
+  password?: string;
 }

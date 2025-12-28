@@ -6,6 +6,7 @@ export const comparePricesWithAI = async (
   products: Product[],
   location: string = "Brasil"
 ): Promise<{ results: ComparisonResult[]; sources: any[] }> => {
+  // Always use process.env.API_KEY and named parameter for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const productListStr = products
@@ -19,42 +20,58 @@ export const comparePricesWithAI = async (
 
     Tarefa: Pesquise os preços atuais desses produtos nos principais supermercados brasileiros (ex: Carrefour, Pão de Açúcar, Extra, Assaí, Atacadão, Mercado Livre Supermercado).
     
-    Por favor, retorne uma comparação detalhada em formato JSON. 
     Calcule o valor total da cesta em pelo menos 3 lojas diferentes.
     Se não encontrar o preço exato, use uma estimativa baseada em dados recentes do mercado.
-
-    O JSON deve seguir esta estrutura:
-    [
-      {
-        "storeName": "Nome da Loja",
-        "totalPrice": 150.50,
-        "items": [
-          { "productName": "Arroz 5kg", "price": 25.90 },
-          { "productName": "Feijão 1kg", "price": 8.50 }
-        ]
-      }
-    ]
   `;
 
   try {
+    // Use gemini-3-flash-preview for complex reasoning and search tasks
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
+        // Only googleSearch tool is allowed when using search grounding
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
+        // Using responseSchema to ensure valid JSON structure
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              storeName: { type: Type.STRING },
+              totalPrice: { type: Type.NUMBER },
+              items: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    productName: { type: Type.STRING },
+                    price: { type: Type.NUMBER }
+                  },
+                  required: ["productName", "price"]
+                }
+              }
+            },
+            required: ["storeName", "totalPrice", "items"]
+          }
+        }
       },
     });
 
+    // Access .text property directly (not a method)
     const text = response.text || "[]";
+    // Extract grounding chunks as required for googleSearch
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     
     let results: ComparisonResult[] = JSON.parse(text);
     
     // Sort and mark the cheapest
-    if (results.length > 0) {
+    if (Array.isArray(results) && results.length > 0) {
       results.sort((a, b) => a.totalPrice - b.totalPrice);
       results[0].isCheapest = true;
+    } else {
+      results = [];
     }
 
     return { results, sources };
