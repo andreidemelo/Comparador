@@ -148,6 +148,15 @@
                         <span class="text-xs font-bold text-gray-400 mt-2">Cadastrar e gerenciar lojas</span>
                     </button>
 
+                    <!-- Gerenciar Cidades -->
+                    <button onclick="showView('admin-cities')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
+                        <div class="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </div>
+                        <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Cidades</span>
+                        <span class="text-xs font-bold text-gray-400 mt-2">Locais de atuação</span>
+                    </button>
+
                     <!-- Gerenciar Categorias -->
                     <button onclick="showView('admin-categories')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
                         <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -165,7 +174,7 @@
                         <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Produtos</span>
                         <span class="text-xs font-bold text-gray-400 mt-2">Itens e marcas</span>
                     </button>
-
+                    
                     <!-- Gerenciar Preços -->
                     <button onclick="showView('admin-prices')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
                         <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -184,16 +193,73 @@
                     <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Mercados</h2>
                 </div>
                 <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                    <form id="form-admin-market" class="flex gap-4">
-                        <input type="text" id="input-admin-market-name" placeholder="Nome do Mercado (ex: Carrefour)" class="flex-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
-                        <button type="submit" class="px-6 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar</button>
+                    <form id="form-admin-market" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Nome do Mercado</label>
+                            <input type="text" id="input-admin-market-name" placeholder="Ex: Carrefour Bairro" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Cidade</label>
+                            <select id="select-admin-market-city" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required></select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Bairro</label>
+                            <input type="text" id="input-admin-market-district" placeholder="Ex: Jardins" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Estado (UF)</label>
+                            <input type="text" id="input-admin-market-state" placeholder="Ex: SP" maxlength="2" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar Mercado</button>
+                        </div>
+                    </form>
+                    <div class="mt-8 overflow-hidden rounded-2xl border border-gray-100">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
+                                <tr>
+                                    <th class="p-4">Mercado</th>
+                                    <th class="p-4">Cidade/Bairro</th>
+                                    <th class="p-4">Estado</th>
+                                    <th class="p-4 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-admin-markets" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW: ADMIN CITIES -->
+            <div id="view-admin-cities" class="hidden animate-in space-y-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="showView('admin-menu')" class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h2 class="text-xl font-black uppercase text-gray-800 tracking-tighter">Gerenciar Cidades</h2>
+                </div>
+                <section class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <form id="form-admin-city" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Nome da Cidade</label>
+                            <input type="text" id="input-admin-city-name" placeholder="Ex: São Paulo" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Estado (UF)</label>
+                            <input type="text" id="input-admin-city-state" placeholder="Ex: SP" maxlength="2" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700">Salvar</button>
+                        </div>
                     </form>
                     <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
-                                <tr><th class="p-4">Nome do Mercado</th><th class="p-4 text-right">Ação</th></tr>
+                                <tr>
+                                    <th class="p-4">Cidade</th>
+                                    <th class="p-4">Estado</th>
+                                    <th class="p-4 text-right">Ação</th>
+                                </tr>
                             </thead>
-                            <tbody id="table-admin-markets" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
+                            <tbody id="table-admin-cities" class="divide-y divide-gray-50 text-sm font-bold"></tbody>
                         </table>
                     </div>
                 </section>
@@ -318,9 +384,23 @@
         }
 
         function initData() {
-            if (!localStorage.getItem('supercompare_markets')) {
-                localStorage.setItem('supercompare_markets', JSON.stringify(['Carrefour', 'Pão de Açúcar', 'Extra', 'Assai', 'Atacadão']));
+            if (!localStorage.getItem('supercompare_cities')) {
+                localStorage.setItem('supercompare_cities', JSON.stringify([
+                    { name: 'São Paulo', state: 'SP' },
+                    { name: 'Rio de Janeiro', state: 'RJ' },
+                    { name: 'Curitiba', state: 'PR' },
+                    { name: 'Belo Horizonte', state: 'MG' }
+                ]));
             }
+
+            if (!localStorage.getItem('supercompare_markets')) {
+                localStorage.setItem('supercompare_markets', JSON.stringify([
+                    { name: 'Carrefour', city: 'São Paulo', district: 'Jardins', state: 'SP' },
+                    { name: 'Pão de Açúcar', city: 'São Paulo', district: 'Pinheiros', state: 'SP' },
+                    { name: 'Extra', city: 'Rio de Janeiro', district: 'Barra', state: 'RJ' },
+                ]));
+            }
+
             if (!localStorage.getItem('supercompare_categories')) {
                 localStorage.setItem('supercompare_categories', JSON.stringify(Object.keys(DEFAULT_PRODUCT_STRUCTURE)));
             }
@@ -349,6 +429,7 @@
                 target.classList.remove('hidden');
                 // Refresh data based on view
                 if (viewId === 'admin-markets') renderAdminMarkets();
+                if (viewId === 'admin-cities') renderAdminCities();
                 if (viewId === 'admin-categories') renderAdminCategories();
                 if (viewId === 'admin-products') renderAdminProducts();
                 if (viewId === 'admin-prices') renderAdminPrices();
@@ -417,34 +498,94 @@
             location.reload();
         };
 
+        // --- ADMIN: CITIES ---
+        function renderAdminCities() {
+            const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
+            const table = document.getElementById('table-admin-cities');
+            table.innerHTML = cities.map(c => {
+                const cityName = typeof c === 'string' ? c : c.name;
+                const cityState = c.state || '-';
+                return `
+                <tr>
+                    <td class="p-4">${cityName}</td>
+                    <td class="p-4">${cityState}</td>
+                    <td class="p-4 text-right"><button onclick="deleteCity('${cityName}')" class="text-red-500 hover:underline">Remover</button></td>
+                </tr>
+            `}).join('');
+        }
+
+        document.getElementById('form-admin-city').onsubmit = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('input-admin-city-name').value;
+            const state = document.getElementById('input-admin-city-state').value;
+            const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
+            
+            // Check if city already exists
+            if (!cities.find(c => (typeof c === 'string' ? c : c.name).toLowerCase() === name.toLowerCase())) {
+                cities.push({ name, state: state.toUpperCase() });
+                localStorage.setItem('supercompare_cities', JSON.stringify(cities.sort((a,b) => (a.name || a).localeCompare(b.name || b))));
+                renderAdminCities();
+                showToast("Cidade Salva!");
+            }
+            e.target.reset();
+        };
+
+        window.deleteCity = (name) => {
+            let cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
+            cities = cities.filter(c => (typeof c === 'string' ? c : c.name) !== name);
+            localStorage.setItem('supercompare_cities', JSON.stringify(cities));
+            renderAdminCities();
+        };
+
         // --- ADMIN: MARKETS ---
         function renderAdminMarkets() {
             const markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+            const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
             const table = document.getElementById('table-admin-markets');
-            table.innerHTML = markets.map(m => `
-                <tr>
-                    <td class="p-4">${m}</td>
-                    <td class="p-4 text-right"><button onclick="deleteMarket('${m}')" class="text-red-500 hover:underline">Remover</button></td>
-                </tr>
-            `).join('');
+            const selectCity = document.getElementById('select-admin-market-city');
+            
+            selectCity.innerHTML = '<option value="">Selecionar Cidade</option>' + cities.map(c => {
+                const name = typeof c === 'string' ? c : c.name;
+                return `<option value="${name}">${name}</option>`;
+            }).join('');
+
+            table.innerHTML = markets.map(m => {
+                const marketName = typeof m === 'string' ? m : m.name;
+                const marketCity = m.city || '-';
+                const marketDistrict = m.district || '-';
+                const marketState = m.state || '-';
+                
+                return `
+                    <tr>
+                        <td class="p-4">${marketName}</td>
+                        <td class="p-4"><span class="block text-gray-800">${marketCity}</span><span class="text-[10px] text-gray-400 uppercase font-black">${marketDistrict}</span></td>
+                        <td class="p-4">${marketState}</td>
+                        <td class="p-4 text-right"><button onclick="deleteMarket('${marketName}')" class="text-red-500 hover:underline">Remover</button></td>
+                    </tr>
+                `}).join('');
         }
 
         document.getElementById('form-admin-market').onsubmit = (e) => {
             e.preventDefault();
             const name = document.getElementById('input-admin-market-name').value;
+            const city = document.getElementById('select-admin-market-city').value;
+            const district = document.getElementById('input-admin-market-district').value;
+            const state = document.getElementById('input-admin-market-state').value;
+            
             const markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
-            if (!markets.includes(name)) {
-                markets.push(name);
-                localStorage.setItem('supercompare_markets', JSON.stringify(markets));
-                renderAdminMarkets();
-                showToast("Mercado Salvo!");
-            }
+            
+            const marketData = { name, city, district, state: state.toUpperCase() };
+            
+            markets.push(marketData);
+            localStorage.setItem('supercompare_markets', JSON.stringify(markets));
+            renderAdminMarkets();
+            showToast("Mercado Salvo!");
             e.target.reset();
         };
 
         window.deleteMarket = (name) => {
             let markets = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
-            markets = markets.filter(m => m !== name);
+            markets = markets.filter(m => (typeof m === 'string' ? m : m.name) !== name);
             localStorage.setItem('supercompare_markets', JSON.stringify(markets));
             renderAdminMarkets();
         };
@@ -467,7 +608,7 @@
             const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
             if (!cats.includes(name)) {
                 cats.push(name);
-                localStorage.setItem('supercompare_categories', JSON.stringify(cats));
+                localStorage.setItem('supercompare_categories', JSON.stringify(cats.sort()));
                 renderAdminCategories();
                 showToast("Categoria Salva!");
             }
@@ -527,7 +668,10 @@
             const selectMarket = document.getElementById('select-admin-price-market');
             const selectProd = document.getElementById('select-admin-price-product');
 
-            selectMarket.innerHTML = '<option value="">Selecionar Mercado</option>' + markets.map(m => `<option value="${m}">${m}</option>`).join('');
+            selectMarket.innerHTML = '<option value="">Selecionar Mercado</option>' + markets.map(m => {
+                const name = typeof m === 'string' ? m : m.name;
+                return `<option value="${name}">${name}</option>`;
+            }).join('');
             selectProd.innerHTML = '<option value="">Selecionar Produto</option>' + prods.map(p => `<option value="${p.name}">${p.name} (${p.category})</option>`).join('');
 
             table.innerHTML = prices.map(item => `
@@ -624,9 +768,14 @@
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const listItems = shoppingList.map(i => `${i.quantity}x ${i.name}`).join(", ");
                 const manualData = JSON.parse(localStorage.getItem('supercompare_manual_prices') || '[]');
+                
+                // Puxa informações dos mercados reais cadastrados para grounding
+                const marketsData = JSON.parse(localStorage.getItem('supercompare_markets') || '[]');
+                const marketsContext = marketsData.length > 0 ? `Analise especificamente estes mercados locais em São Paulo/SP: ${JSON.stringify(marketsData.map(m => (typeof m === 'string' ? m : m.name)))}.` : "";
+
                 const manualContext = manualData.length > 0 ? `Priorize estes preços reais cadastrados no sistema se houver correspondência exata de produto: ${JSON.stringify(manualData)}.` : "";
 
-                const prompt = `Compare os preços em São Paulo/SP para os itens: ${listItems}. Use pelo menos 4 mercados famosos. ${manualContext}`;
+                const prompt = `Compare os preços em São Paulo/SP para os itens: ${listItems}. ${marketsContext} ${manualContext}`;
 
                 const response = await ai.models.generateContent({
                     model: "gemini-3-flash-preview",
