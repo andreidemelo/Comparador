@@ -543,11 +543,23 @@
             const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
             const table = document.getElementById('table-admin-markets');
             const selectCity = document.getElementById('select-admin-market-city');
+            const inputState = document.getElementById('input-admin-market-state');
             
             selectCity.innerHTML = '<option value="">Selecionar Cidade</option>' + cities.map(c => {
                 const name = typeof c === 'string' ? c : c.name;
                 return `<option value="${name}">${name}</option>`;
             }).join('');
+
+            // PREENCHIMENTO AUTOMÁTICO DO ESTADO AO SELECIONAR CIDADE
+            selectCity.onchange = (e) => {
+                const cityName = e.target.value;
+                const foundCity = cities.find(c => (typeof c === 'string' ? c : c.name) === cityName);
+                if (foundCity && typeof foundCity !== 'string' && foundCity.state) {
+                    inputState.value = foundCity.state;
+                } else {
+                    inputState.value = "";
+                }
+            };
 
             table.innerHTML = markets.map(m => {
                 const marketName = typeof m === 'string' ? m : m.name;
