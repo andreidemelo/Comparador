@@ -94,7 +94,7 @@
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
                                 <input type="number" id="input-qty" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none">
                             </div>
-                            <button onclick="addItem()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Add</button>
+                            <button onclick="addItem()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Adicionar</button>
                         </div>
                     </div>
 
@@ -532,12 +532,24 @@
             };
         }
         window.addItem = () => {
-            const cat = document.getElementById('select-category').value;
-            const prod = document.getElementById('select-product').value;
-            const qty = parseInt(document.getElementById('input-qty').value);
+            const catSelect = document.getElementById('select-category');
+            const prodSelect = document.getElementById('select-product');
+            const qtyInput = document.getElementById('input-qty');
+            
+            const cat = catSelect.value;
+            const prod = prodSelect.value;
+            const qty = parseInt(qtyInput.value);
+            
             if (!prod) return;
+            
             shoppingList.push({ id: Date.now().toString(), name: prod, category: cat, quantity: qty });
             renderShoppingList();
+            
+            // Reset fields
+            catSelect.value = "";
+            prodSelect.innerHTML = '<option value="">Selecione a categoria primeiro</option>';
+            prodSelect.disabled = true;
+            qtyInput.value = 1;
         };
         window.removeItem = (id) => { shoppingList = shoppingList.filter(i => i.id !== id); renderShoppingList(); };
         function renderShoppingList() {
@@ -591,7 +603,6 @@
             const table = document.getElementById('table-results');
             document.getElementById('results-display').classList.remove('hidden');
             
-            // Alterado: Coluna "V. Unitário" renomeada para "melhor preço"
             let header = `<thead class="bg-gray-50"><tr>
                 <th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>
                 <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>
@@ -599,8 +610,8 @@
             
             comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName} (Total)</th>`);
             
-            // Adicionado: Cabeçalho da coluna "Preço Médio Unit."
-            header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-400 border-l border-gray-100">Preço Médio Unit.</th>`;
+            // Alterado: "Preço Médio Unit." para "Preço Médio"
+            header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-400 border-l border-gray-100">Preço Médio</th>`;
             header += "</tr></thead>";
 
             let body = "<tbody>";
@@ -616,13 +627,19 @@
                 let itemMin = Math.min(...pricesForItem);
                 let itemAvg = pricesForItem.reduce((a, b) => a + b, 0) / pricesForItem.length;
                 
+                // Cálculo da porcentagem de economia vs média
+                let diffPct = itemAvg > 0 ? (((itemAvg - itemMin) / itemAvg) * 100).toFixed(0) : 0;
+
                 bestMixTotal += (itemMin * item.quantity);
                 averageTotal += (itemAvg * item.quantity);
 
                 body += `<tr class="border-b border-gray-50">
                     <td class="p-5 text-xs font-bold">${item.name}</td>
                     <td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>
-                    <td class="p-5 text-center text-xs font-mono font-bold text-gray-400">R$ ${itemMin.toFixed(2)}</td>`;
+                    <td class="p-5 text-center text-xs font-mono font-bold text-gray-400">
+                        R$ ${itemMin.toFixed(2)}
+                        <br><span class="text-[9px] text-emerald-600 font-black">-${diffPct}% vs média</span>
+                    </td>`;
 
                 comparisonResults.forEach(res => {
                     const pi = res.items.find(pi => pi.productName === item.name);
@@ -635,7 +652,6 @@
                     </td>`;
                 });
 
-                // Adicionado: Célula com o valor médio unitário do produto
                 body += `<td class="p-5 text-center border-l border-gray-50 text-xs font-mono text-gray-400">R$ ${itemAvg.toFixed(2)}</td>`;
                 body += "</tr>";
             });
@@ -676,7 +692,7 @@
                 }
                 optimizedByStore[bestOption.store].push({
                     name: item.name,
-                    category: item.category, // Adicionado para o PDF
+                    category: item.category,
                     qty: item.quantity,
                     unitPrice: bestOption.price,
                     totalPrice: bestOption.price * item.quantity
@@ -699,7 +715,6 @@
                 
                 let storeTotal = 0;
                 items.forEach(it => {
-                    // Alterado: Adicionada a categoria do produto no texto do item do PDF
                     doc.text(`${it.qty}x ${it.name} (${it.category})`, 25, y);
                     doc.text(`R$ ${it.unitPrice.toFixed(2)} un.`, 120, y);
                     doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 170, y);
