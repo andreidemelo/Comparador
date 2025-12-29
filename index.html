@@ -608,9 +608,8 @@
                 <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>
                 <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">melhor preço</th>`;
             
-            comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName} (Total)</th>`);
+            comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName}</th>`);
             
-            // Alterado: "Preço Médio Unit." para "Preço Médio"
             header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-400 border-l border-gray-100">Preço Médio</th>`;
             header += "</tr></thead>";
 
