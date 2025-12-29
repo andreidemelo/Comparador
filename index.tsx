@@ -30,9 +30,11 @@ class Database {
         const command = parts[0];
         let table = '';
 
-        if (command === 'SELECT' || command === 'DELETE') {
-            const fromIndex = parts.indexOf('FROM');
-            if (fromIndex !== -1) table = parts[fromIndex + 1].toLowerCase();
+        if (command === 'SELECT' || command === 'DELETE' || command === 'UPDATE') {
+            const fromIndex = parts.indexOf('FROM') !== -1 ? parts.indexOf('FROM') : parts.indexOf('UPDATE') !== -1 ? parts.indexOf('UPDATE') : -1;
+            if (fromIndex !== -1) {
+                table = parts[fromIndex + 1].toLowerCase();
+            }
         } else if (command === 'INSERT') {
             const intoIndex = parts.indexOf('INTO');
             if (intoIndex !== -1) table = parts[intoIndex + 1].toLowerCase();
@@ -56,6 +58,17 @@ class Database {
             this.tables[table] = this.tables[table].filter(row => row.id != id);
             this.save();
             return [];
+        }
+
+        if (command === 'UPDATE') {
+            const id = params[0];
+            const newData = params[1];
+            const index = this.tables[table].findIndex(row => row.id == id);
+            if (index !== -1) {
+                this.tables[table][index] = { ...this.tables[table][index], ...newData };
+                this.save();
+                return [this.tables[table][index]];
+            }
         }
 
         return [];
@@ -214,7 +227,10 @@ function renderAdminPrices() {
             <td class="p-4 font-bold">${p.market}</td>
             <td class="p-4">${p.product}</td>
             <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
-            <td class="p-4 text-right"><button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase">Alterar</button>
+                <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase">Excluir</button>
+            </td>
         </tr>
     `).join('');
 }
@@ -226,13 +242,33 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
     f.onsubmit = (e) => {
         e.preventDefault();
         const data: any = {};
+        
+        // Verifica se há ID de edição (específico para preços)
+        const editIdField = document.getElementById('price-id') as HTMLInputElement;
+        const editId = editIdField ? editIdField.value : null;
+
         fields.forEach(fid => {
             const el = document.getElementById(fid) as any;
-            data[fid.split('-').pop()!] = el.value;
+            if (el) {
+                data[fid.split('-').pop()!] = el.value;
+            }
         });
-        if (table === 'prices') data.updatedAt = new Date().toLocaleString('pt-BR');
-        db.query(`INSERT INTO ${table}`, [data]);
-        showToast('Gravado com sucesso!');
+
+        if (table === 'prices') {
+            data.updatedAt = new Date().toLocaleString('pt-BR');
+            if (editId) {
+                db.query(`UPDATE prices`, [editId, data]);
+                showToast('Registro alterado com sucesso!');
+                if (editIdField) editIdField.value = '';
+            } else {
+                db.query(`INSERT INTO ${table}`, [data]);
+                showToast('Gravado com sucesso!');
+            }
+        } else {
+            db.query(`INSERT INTO ${table}`, [data]);
+            showToast('Gravado com sucesso!');
+        }
+
         (e.target as HTMLFormElement).reset();
         if (callback) callback();
     };
@@ -350,10 +386,30 @@ function populateDropdown(id: string, table: string) {
 }
 
 (window as any).deleteRow = (table: string, id: any) => {
-    if (confirm('Deletar via SQL?')) {
-        db.query(`DELETE FROM ${table}`, id);
+    if (confirm('Deletar registro?')) {
+        db.query(`DELETE FROM ${table}`, [id]);
         showView(`admin-${table}`);
     }
+};
+
+(window as any).editPrice = (id: any) => {
+    const price = db.query('SELECT * FROM prices').find(p => p.id == id);
+    if (!price) return;
+
+    // Preenche os campos do formulário
+    (document.getElementById('price-id') as HTMLInputElement).value = price.id;
+    (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
+    (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
+    
+    // Atualiza cascata de produtos
+    (window as any).onCategoryChangePrice();
+    (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
+    
+    (document.getElementById('price-value') as HTMLInputElement).value = price.price;
+    
+    // Scroll suave para o formulário
+    document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Modo de edição ativado');
 };
 
 function showToast(m: string) {

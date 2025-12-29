@@ -187,13 +187,27 @@
             <div id="view-admin-prices" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE PREÇOS</h2></div>
                 <form id="form-price" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <input type="hidden" id="price-id">
                     <select id="price-market" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-category" onchange="onCategoryChangePrice()" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-product" class="p-3 bg-gray-50 rounded-xl border" required disabled><option value="">Produto</option></select>
                     <input type="number" step="0.01" id="price-value" placeholder="R$ 0,00" class="p-3 bg-gray-50 rounded-xl border" required>
-                    <button type="submit" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
+                    <button type="submit" id="btn-save-price" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
-                <div class="bg-white rounded-3xl border overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="p-4">Preço</th><th class="p-4">Mercado</th><th class="p-4">Produto</th><th class="p-4">Data/Hora</th><th class="p-4 text-right">Ação</th></tr></thead><tbody id="table-prices-body"></tbody></table></div>
+                <div class="bg-white rounded-3xl border overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="p-4">Preço</th>
+                                <th class="p-4">Mercado</th>
+                                <th class="p-4">Produto</th>
+                                <th class="p-4">Data/Hora</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-prices-body"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
