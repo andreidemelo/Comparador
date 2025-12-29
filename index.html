@@ -532,17 +532,18 @@
             };
         }
         window.addItem = () => {
+            const cat = document.getElementById('select-category').value;
             const prod = document.getElementById('select-product').value;
             const qty = parseInt(document.getElementById('input-qty').value);
             if (!prod) return;
-            shoppingList.push({ id: Date.now().toString(), name: prod, quantity: qty });
+            shoppingList.push({ id: Date.now().toString(), name: prod, category: cat, quantity: qty });
             renderShoppingList();
         };
         window.removeItem = (id) => { shoppingList = shoppingList.filter(i => i.id !== id); renderShoppingList(); };
         function renderShoppingList() {
             document.getElementById('shopping-list-display').innerHTML = shoppingList.map(item => `
                 <div class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                    <span class="text-sm font-bold text-gray-700">${item.quantity}x ${item.name}</span>
+                    <span class="text-sm font-bold text-gray-700">${item.quantity}x ${item.name} <span class="text-[10px] text-gray-400 uppercase font-bold ml-1">${item.category}</span></span>
                     <button onclick="removeItem('${item.id}')" class="text-red-400">×</button>
                 </div>`).join('');
             document.getElementById('action-compare').classList.toggle('hidden', shoppingList.length === 0);
@@ -590,12 +591,16 @@
             const table = document.getElementById('table-results');
             document.getElementById('results-display').classList.remove('hidden');
             
-            // Adicionada coluna "V. Unitário" no cabeçalho
+            // Alterado: Coluna "V. Unitário" renomeada para "melhor preço"
             let header = `<thead class="bg-gray-50"><tr>
                 <th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>
                 <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>
-                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">V. Unitário</th>`;
+                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">melhor preço</th>`;
+            
             comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName} (Total)</th>`);
+            
+            // Adicionado: Cabeçalho da coluna "Preço Médio Unit."
+            header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-400 border-l border-gray-100">Preço Médio Unit.</th>`;
             header += "</tr></thead>";
 
             let body = "<tbody>";
@@ -603,7 +608,6 @@
             let averageTotal = 0;
 
             shoppingList.forEach(item => {
-                // Coleta todos os preços deste item em todos os mercados comparados
                 const pricesForItem = comparisonResults.map(res => {
                     const foundItem = res.items.find(pi => pi.productName === item.name);
                     return foundItem ? foundItem.price : 0;
@@ -630,15 +634,17 @@
                         </span>
                     </td>`;
                 });
+
+                // Adicionado: Célula com o valor médio unitário do produto
+                body += `<td class="p-5 text-center border-l border-gray-50 text-xs font-mono text-gray-400">R$ ${itemAvg.toFixed(2)}</td>`;
                 body += "</tr>";
             });
 
-            // Cálculo da economia em relação à média de preços
             const totalEconomy = averageTotal - bestMixTotal;
 
             body += `<tr class="bg-emerald-600 text-white">
                 <td class="p-6 font-black uppercase text-xs" colspan="3">Economia Total (Mix)</td>
-                <td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td>
+                <td colspan="${comparisonResults.length + 1}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td>
             </tr></tbody>`;
             table.innerHTML = header + body;
         }
@@ -655,7 +661,6 @@
             doc.text(`Gerado em: ${new Date().toLocaleString()}`, 20, y);
             y += 15;
 
-            // Agrupa itens pelo mercado onde estão mais baratos
             const optimizedByStore = {};
             
             shoppingList.forEach(item => {
@@ -664,7 +669,6 @@
                     price: res.items.find(pi => pi.productName === item.name)?.price || 0
                 }));
                 
-                // Encontra a melhor opção
                 const bestOption = prices.reduce((min, current) => current.price < min.price ? current : min, prices[0]);
                 
                 if (!optimizedByStore[bestOption.store]) {
@@ -672,6 +676,7 @@
                 }
                 optimizedByStore[bestOption.store].push({
                     name: item.name,
+                    category: item.category, // Adicionado para o PDF
                     qty: item.quantity,
                     unitPrice: bestOption.price,
                     totalPrice: bestOption.price * item.quantity
@@ -694,7 +699,8 @@
                 
                 let storeTotal = 0;
                 items.forEach(it => {
-                    doc.text(`${it.qty}x ${it.name}`, 25, y);
+                    // Alterado: Adicionada a categoria do produto no texto do item do PDF
+                    doc.text(`${it.qty}x ${it.name} (${it.category})`, 25, y);
                     doc.text(`R$ ${it.unitPrice.toFixed(2)} un.`, 120, y);
                     doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 170, y);
                     storeTotal += it.totalPrice;
