@@ -17,6 +17,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .admin-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
         .admin-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        /* Remove arrows/spinners from numeric input for a cleaner "no selection/spin" feel */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
@@ -191,15 +195,15 @@
                     <select id="price-market" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-category" onchange="onCategoryChangePrice()" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-product" class="p-3 bg-gray-50 rounded-xl border" required disabled><option value="">Produto</option></select>
-                    <!-- Campo Numérico com 2 casas decimais e min 0 -->
-                    <input type="number" step="0.01" min="0" id="price-value" placeholder="R$ 0,00" class="p-3 bg-gray-50 rounded-xl border" required>
+                    <!-- Campo Numérico puro conforme solicitado -->
+                    <input type="number" step="0.01" min="0" id="price-value" placeholder="0,00" class="p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" id="btn-save-price" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
                 <div class="bg-white rounded-3xl border overflow-hidden">
                     <table class="w-full text-left">
                         <thead class="bg-gray-50 text-[10px] font-black uppercase">
                             <tr>
-                                <th class="p-4">Preço (R$)</th>
+                                <th class="p-4">Valor</th>
                                 <th class="p-4">Mercado</th>
                                 <th class="p-4">Produto</th>
                                 <th class="p-4">Data/Hora</th>

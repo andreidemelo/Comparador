@@ -223,6 +223,7 @@ function renderAdminPrices() {
     if (!t) return;
     t.innerHTML = db.query('SELECT * FROM prices').map(p => `
         <tr class="border-b">
+            <!-- Exibição puramente numérica conforme solicitado -->
             <td class="p-4 font-black text-emerald-600">${parseFloat(p.price).toFixed(2)}</td>
             <td class="p-4 font-bold">${p.market}</td>
             <td class="p-4">${p.product}</td>
@@ -251,7 +252,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                // Ao salvar preço, garantimos que é um número formatado
+                // Ao salvar preço, garantimos que é um número formatado com 2 casas decimais
                 if (fid === 'price-value') {
                     val = parseFloat(val).toFixed(2);
                 }
@@ -263,7 +264,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             data.updatedAt = new Date().toLocaleString('pt-BR');
             if (editId) {
                 db.query(`UPDATE prices`, [editId, data]);
-                showToast('Registro alterado com sucesso!');
+                showToast('Preço alterado com sucesso!');
                 if (editIdField) editIdField.value = '';
             } else {
                 db.query(`INSERT INTO ${table}`, [data]);
