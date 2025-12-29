@@ -1,6 +1,6 @@
 {
-  "name": "SuperCompare - Comparador de Preços",
-  "description": "Uma ferramenta inteligente para criar listas de compras e comparar preços em tempo real nos principais supermercados usando IA.",
+  "name": "SuperCompare PRO - SQL Local",
+  "description": "App de comparação de preços independente de APIs externas, utilizando motor relacional simulado no navegador.",
   "requestFramePermissions": [
     "geolocation"
   ]
