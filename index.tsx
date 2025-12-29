@@ -1,52 +1,149 @@
 
-// --- ESTADO ---
-let currentUser: string | null = null;
-let authMode: 'login' | 'register' = 'login';
-let shoppingList: any[] = [];
+// --- MOTOR SQL SIMULADO ---
+class Database {
+    private tables: Record<string, any[]> = {};
 
-// --- INICIALIZAÇÃO ---
-document.addEventListener('DOMContentLoaded', () => {
-    setupAdminUser();
-    initData();
-    checkSession();
-    renderShoppingDropdowns();
-});
+    constructor() {
+        this.load();
+    }
 
-function setupAdminUser() {
-    const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
-    if (!users.find((u: any) => u.name === 'administrador')) {
-        users.push({ 
-            name: 'administrador', 
-            password: 'Mu@300413', 
-            email: 'admin@supercompare.com',
-            city: 'Sistema',
-            createdAt: new Date().toISOString() 
-        });
-        localStorage.setItem('supercompare_users_db', JSON.stringify(users));
+    private load() {
+        this.tables.users = JSON.parse(localStorage.getItem('db_users') || '[]');
+        this.tables.cities = JSON.parse(localStorage.getItem('db_cities') || '[]');
+        this.tables.categories = JSON.parse(localStorage.getItem('db_categories') || '["Arroz", "Feijão", "Carnes", "Laticínios"]');
+    }
+
+    private save() {
+        localStorage.setItem('db_users', JSON.stringify(this.tables.users));
+        localStorage.setItem('db_cities', JSON.stringify(this.tables.cities));
+    }
+
+    // SELECT * FROM table WHERE condition
+    query(sql: string, params: any[] = []): any[] {
+        const parts = sql.trim().toUpperCase().split(' ');
+        const table = parts[parts.indexOf('FROM') + 1].toLowerCase();
+
+        if (parts[0] === 'SELECT') {
+            return [...this.tables[table]];
+        }
+
+        if (parts[0] === 'INSERT') {
+            const data = params[0];
+            data.id = Date.now();
+            this.tables[table].push(data);
+            this.save();
+            return [data];
+        }
+
+        if (parts[0] === 'DELETE') {
+            const id = params[0];
+            this.tables[table] = this.tables[table].filter(row => row.id !== id && row.name !== id);
+            this.save();
+            return [];
+        }
+
+        return [];
     }
 }
 
-function initData() {
-    if (!localStorage.getItem('supercompare_cities')) {
-        localStorage.setItem('supercompare_cities', JSON.stringify([
-            { name: 'São Paulo', state: 'SP' },
-            { name: 'Rio de Janeiro', state: 'RJ' }
-        ]));
+const db = new Database();
+
+// --- ESTADO DA APP ---
+let currentUser: any = null;
+let authMode: 'login' | 'register' = 'login';
+
+// --- INICIALIZAÇÃO ---
+document.addEventListener('DOMContentLoaded', () => {
+    initAdmin();
+    checkSession();
+});
+
+function initAdmin() {
+    const adminExists = db.query('SELECT * FROM users').find(u => u.name === 'administrador');
+    if (!adminExists) {
+        db.query('INSERT INTO users', [{
+            name: 'administrador',
+            password: 'Mu@300413',
+            email: 'admin@supercompare.com',
+            city: 'Sistema',
+            createdAt: new Date().toISOString()
+        }]);
     }
-    if (!localStorage.getItem('supercompare_categories')) {
-        localStorage.setItem('supercompare_categories', JSON.stringify(['Arroz', 'Feijão', 'Leite']));
+    
+    // Cidades iniciais
+    if (db.query('SELECT * FROM cities').length === 0) {
+        db.query('INSERT INTO cities', [{ name: 'São Paulo', state: 'SP' }]);
+        db.query('INSERT INTO cities', [{ name: 'Rio de Janeiro', state: 'RJ' }]);
     }
 }
 
 function checkSession() {
-    const session = localStorage.getItem('supercompare_session');
+    const session = localStorage.getItem('app_session');
     if (session) {
-        currentUser = JSON.parse(session).name;
-        enterApp();
+        currentUser = JSON.parse(session);
+        renderApp();
     }
 }
 
-// --- NAVEGAÇÃO ---
+// --- AUTH LÓGICA ---
+const setAuthMode = (mode: 'login' | 'register') => {
+    authMode = mode;
+    const btnLogin = document.getElementById('btn-tab-login');
+    const btnRegister = document.getElementById('btn-tab-register');
+    const registerFields = document.getElementById('register-fields');
+    const btnSubmit = document.getElementById('btn-auth-submit');
+
+    if (btnLogin) btnLogin.className = mode === 'login' ? 'flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600' : 'flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400';
+    if (btnRegister) btnRegister.className = mode === 'register' ? 'flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600' : 'flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400';
+    
+    if (registerFields) registerFields.classList.toggle('hidden', mode === 'login');
+    if (btnSubmit) btnSubmit.textContent = mode === 'login' ? 'Acessar Sistema' : 'Confirmar Cadastro';
+    
+    if (mode === 'register') populateCitiesSelect('auth-city');
+};
+(window as any).setAuthMode = setAuthMode;
+
+const authForm = document.getElementById('form-auth');
+if (authForm) {
+    authForm.onsubmit = (e) => {
+        e.preventDefault();
+        const userInp = (document.getElementById('auth-username') as HTMLInputElement).value.trim();
+        const passInp = (document.getElementById('auth-password') as HTMLInputElement).value;
+        const errorEl = document.getElementById('auth-error');
+
+        if (authMode === 'register') {
+            const emailInp = (document.getElementById('auth-email') as HTMLInputElement).value;
+            const cityInp = (document.getElementById('auth-city') as HTMLSelectElement).value;
+
+            if (!cityInp) {
+                if (errorEl) { errorEl.textContent = 'Selecione uma cidade'; errorEl.classList.remove('hidden'); }
+                return;
+            }
+
+            db.query('INSERT INTO users', [{
+                name: userInp,
+                email: emailInp,
+                city: cityInp,
+                password: passInp,
+                createdAt: new Date().toISOString()
+            }]);
+            
+            showToast('Cadastro realizado!');
+            setAuthMode('login');
+        } else {
+            const user = db.query('SELECT * FROM users').find(u => u.name === userInp && u.password === passInp);
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('app_session', JSON.stringify(user));
+                renderApp();
+            } else {
+                if (errorEl) { errorEl.textContent = 'Usuário ou senha incorretos'; errorEl.classList.remove('hidden'); }
+            }
+        }
+    };
+}
+
+// --- NAVEGAÇÃO E VIEWS ---
 const showView = (viewId: string) => {
     document.querySelectorAll('#main-app main > div').forEach(div => div.classList.add('hidden'));
     const target = document.getElementById(`view-${viewId}`);
@@ -59,221 +156,112 @@ const showView = (viewId: string) => {
 };
 (window as any).showView = showView;
 
-const setAuthMode = (mode: 'login' | 'register') => {
-    authMode = mode;
-    const btnLogin = document.getElementById('btn-tab-login');
-    const btnRegister = document.getElementById('btn-tab-register');
-    const btnSubmit = document.getElementById('btn-auth-submit');
-    const registerFields = document.getElementById('register-only-fields');
-    const errorEl = document.getElementById('auth-error');
-    const successEl = document.getElementById('auth-success');
-
-    if (btnLogin) btnLogin.className = mode === 'login' ? "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600" : "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
-    if (btnRegister) btnRegister.className = mode === 'register' ? "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600" : "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
-    if (btnSubmit) btnSubmit.textContent = mode === 'login' ? "Acessar App" : "Confirmar Cadastro";
+function renderApp() {
+    document.getElementById('auth-section')?.classList.add('hidden');
+    document.getElementById('main-app')?.classList.remove('hidden');
     
-    if (registerFields) {
-        registerFields.classList.toggle('hidden', mode === 'login');
-        if (mode === 'register') {
-            populateRegisterCities();
-            // Torna os campos requeridos apenas no modo registro
-            (document.getElementById('auth-email') as HTMLInputElement).required = true;
-            (document.getElementById('auth-city') as HTMLSelectElement).required = true;
-        } else {
-            (document.getElementById('auth-email') as HTMLInputElement).required = false;
-            (document.getElementById('auth-city') as HTMLSelectElement).required = false;
-        }
-    }
-
-    if (errorEl) errorEl.classList.add('hidden');
-    if (successEl) successEl.classList.add('hidden');
-};
-(window as any).setAuthMode = setAuthMode;
-
-function populateRegisterCities() {
-    const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
-    const select = document.getElementById('auth-city') as HTMLSelectElement;
-    if (select) {
-        select.innerHTML = '<option value="">Selecione sua Cidade</option>' + 
-            cities.map((c: any) => `<option value="${c.name}">${c.name}</option>`).join('');
-    }
-}
-
-// --- AUTENTICAÇÃO ---
-const authForm = document.getElementById('form-auth');
-if (authForm) {
-    authForm.onsubmit = (e) => {
-        e.preventDefault();
-        const nameEl = document.getElementById('auth-username') as HTMLInputElement;
-        const passEl = document.getElementById('auth-password') as HTMLInputElement;
-        const emailEl = document.getElementById('auth-email') as HTMLInputElement;
-        const cityEl = document.getElementById('auth-city') as HTMLSelectElement;
-        const errorEl = document.getElementById('auth-error');
-        const successEl = document.getElementById('auth-success');
-        
-        const name = nameEl.value.trim();
-        const pass = passEl.value;
-        const email = emailEl.value.trim();
-        const city = cityEl.value;
-
-        if (errorEl) errorEl.classList.add('hidden');
-        if (successEl) successEl.classList.add('hidden');
-
-        const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
-
-        if (authMode === 'register') {
-            if (users.find((u: any) => u.name.toLowerCase() === name.toLowerCase())) {
-                if (errorEl) {
-                    errorEl.textContent = "Erro: Este usuário já existe.";
-                    errorEl.classList.remove('hidden');
-                }
-                return;
-            }
-            users.push({ 
-                name, 
-                email,
-                city,
-                password: pass, 
-                createdAt: new Date().toISOString() 
-            });
-            localStorage.setItem('supercompare_users_db', JSON.stringify(users));
-            if (successEl) {
-                successEl.textContent = "Sucesso! Conta criada. Agora faça login.";
-                successEl.classList.remove('hidden');
-            }
-            setAuthMode('login');
-        } else {
-            const user = users.find((u: any) => u.name.toLowerCase() === name.toLowerCase() && u.password === pass);
-            if (user) {
-                currentUser = user.name;
-                localStorage.setItem('supercompare_session', JSON.stringify({ name: user.name }));
-                enterApp();
-            } else {
-                if (errorEl) {
-                    errorEl.textContent = "Erro: Usuário ou senha incorretos";
-                    errorEl.classList.remove('hidden');
-                }
-            }
-        }
-    };
-}
-
-function enterApp() {
-    const authSec = document.getElementById('auth-section');
-    const mainApp = document.getElementById('main-app');
     const headerName = document.getElementById('header-user-name');
+    const headerCity = document.getElementById('header-user-city');
     const navAdmin = document.getElementById('nav-admin');
 
-    if (authSec) authSec.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
-    if (headerName) headerName.textContent = currentUser;
-    if (navAdmin) navAdmin.classList.toggle('hidden', currentUser !== 'administrador');
+    if (headerName) headerName.textContent = currentUser.name;
+    if (headerCity) headerCity.textContent = currentUser.city;
+    if (navAdmin) navAdmin.classList.toggle('hidden', currentUser.name !== 'administrador');
+    
     showView('home');
 }
 
-(window as any).logout = () => {
-    localStorage.removeItem('supercompare_session');
-    location.reload();
-};
+(window as any).logout = () => { localStorage.removeItem('app_session'); location.reload(); };
 
-// --- ADMIN: USUÁRIOS ---
+// --- ADMIN USERS ---
 function renderAdminUsers() {
-    const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
-    const tableBody = document.getElementById('table-admin-users');
-    
-    if (!tableBody) return;
+    const table = document.getElementById('table-users-body');
+    if (!table) return;
 
-    tableBody.innerHTML = users.map((u: any) => {
-        const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        }) : 'N/A';
-
+    const users = db.query('SELECT * FROM users');
+    table.innerHTML = users.map(u => {
+        const dateFormatted = new Date(u.createdAt).toLocaleString('pt-BR');
         return `
-            <tr>
-                <td class="p-4">
-                    <p class="font-black text-gray-800">${u.name}</p>
-                </td>
-                <td class="p-4">
-                    <p class="text-xs text-gray-600">${u.email || 'N/A'}</p>
-                </td>
-                <td class="p-4">
-                    <p class="text-[10px] text-emerald-600 uppercase font-black">${u.city || 'N/A'}</p>
-                </td>
-                <td class="p-4 text-gray-500 font-normal">${date}</td>
-                <td class="p-4 font-mono text-gray-400">${u.password}</td>
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 font-bold text-gray-800">${u.name}</td>
+                <td class="p-4 text-gray-500">${u.email || 'N/A'}</td>
+                <td class="p-4 font-black text-[10px] text-emerald-600 uppercase">${u.city}</td>
+                <td class="p-4 text-gray-400 font-mono text-xs">${dateFormatted}</td>
+                <td class="p-4 text-gray-300 font-mono tracking-tighter">${u.password}</td>
                 <td class="p-4 text-right">
                     ${u.name === 'administrador' ? 
-                        '<span class="text-xs text-gray-400 italic">Sistema</span>' : 
-                        `<button onclick="deleteUser('${u.name}')" class="text-red-500 hover:underline">Remover</button>`}
+                        '<span class="text-[9px] font-black uppercase text-gray-300">Lock</span>' : 
+                        `<button onclick="deleteRow('users', ${u.id})" class="text-red-400 hover:text-red-600 font-bold uppercase text-[10px]">Excluir</button>`}
                 </td>
             </tr>
         `;
     }).join('');
 }
 
-const deleteUser = (name: string) => {
-    if(!confirm(`Excluir usuário "${name}" permanentemente?`)) return;
-    let users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
-    localStorage.setItem('supercompare_users_db', JSON.stringify(users.filter((u: any) => u.name !== name)));
-    renderAdminUsers();
-    showToast("Usuário removido");
-};
-(window as any).deleteUser = deleteUser;
-
-// --- ADMIN: CIDADES ---
+// --- ADMIN CITIES ---
 function renderAdminCities() {
-    const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
-    const table = document.getElementById('table-admin-cities');
-    if (table) table.innerHTML = cities.map((c: any) => `<tr><td class="p-4">${c.name}</td><td class="p-4">${c.state}</td><td class="p-4 text-right"><button onclick="deleteCity('${c.name}')" class="text-red-500">Remover</button></td></tr>`).join('');
+    const table = document.getElementById('table-cities-body');
+    if (!table) return;
+    const cities = db.query('SELECT * FROM cities');
+    table.innerHTML = cities.map(c => `
+        <tr>
+            <td class="p-4 font-bold">${c.name}</td>
+            <td class="p-4 font-mono text-emerald-600">${c.state}</td>
+            <td class="p-4 text-right">
+                <button onclick="deleteRow('cities', ${c.id})" class="text-red-400 font-bold uppercase text-[10px]">Remover</button>
+            </td>
+        </tr>
+    `).join('');
 }
-const deleteCity = (name: string) => {
-    let cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
-    localStorage.setItem('supercompare_cities', JSON.stringify(cities.filter((c: any) => c.name !== name)));
-    renderAdminCities();
-};
-(window as any).deleteCity = deleteCity;
 
-const cityForm = document.getElementById('form-admin-city');
+const cityForm = document.getElementById('form-city');
 if (cityForm) {
     cityForm.onsubmit = (e) => {
         e.preventDefault();
-        const cities = JSON.parse(localStorage.getItem('supercompare_cities') || '[]');
-        cities.push({ 
-            name: (document.getElementById('input-admin-city-name') as HTMLInputElement).value, 
-            state: (document.getElementById('input-admin-city-state') as HTMLInputElement).value.toUpperCase() 
-        });
-        localStorage.setItem('supercompare_cities', JSON.stringify(cities));
+        const name = (document.getElementById('input-city-name') as HTMLInputElement).value;
+        const state = (document.getElementById('input-city-state') as HTMLInputElement).value.toUpperCase();
+        db.query('INSERT INTO cities', [{ name, state }]);
         renderAdminCities();
         (e.target as HTMLFormElement).reset();
+        showToast('Cidade inserida via SQL');
     };
 }
 
+(window as any).deleteRow = (table: string, id: any) => {
+    if (confirm('Deseja realmente excluir este registro?')) {
+        db.query(`DELETE FROM ${table}`, [id]);
+        if (table === 'users') renderAdminUsers();
+        if (table === 'cities') renderAdminCities();
+        showToast('Registro deletado');
+    }
+};
+
+// --- HOME / SHOPPING ---
+function renderShoppingDropdowns() {
+    const cats = db.query('SELECT * FROM categories');
+    const select = document.getElementById('select-category');
+    if (select) select.innerHTML = '<option value="">Selecione...</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
 // --- UTILITÁRIOS ---
+function populateCitiesSelect(elementId: string) {
+    const select = document.getElementById(elementId) as HTMLSelectElement;
+    const cities = db.query('SELECT * FROM cities');
+    if (select) {
+        select.innerHTML = '<option value="">Selecione sua Cidade</option>' + 
+            cities.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    }
+}
+
 function showToast(txt: string) {
     const t = document.getElementById('toast');
     const tx = document.getElementById('toast-text');
     if (t && tx) {
         tx.textContent = txt;
         t.classList.remove('translate-y-20');
-        setTimeout(() => t.classList.add('translate-y-20'), 2000);
+        setTimeout(() => t.classList.add('translate-y-20'), 2500);
     }
 }
 
-function renderShoppingDropdowns() {
-    const cats = JSON.parse(localStorage.getItem('supercompare_categories') || '[]');
-    const selCat = document.getElementById('select-category') as HTMLSelectElement;
-    if (!selCat) return;
-    selCat.innerHTML = '<option value="">Categoria</option>' + cats.map((c: any) => `<option value="${c}">${c}</option>`).join('');
-}
-
-// Funções globais placeholder para não quebrar o HTML inicial
-(window as any).addItem = () => {};
-(window as any).runComparison = () => {};
-(window as any).removeItem = () => {};
-(window as any).generatePDFList = () => {};
-(window as any).saveList = () => {};
+// Placeholders globais
+(window as any).addItem = () => { showToast('Funcionalidade de Comparação SQL em breve!'); };
