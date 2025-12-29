@@ -79,7 +79,7 @@ const db = new Database();
 
 // --- APP STATE ---
 let currentUser: any = null;
-let shoppingList: any[] = [];
+let shoppingList: { name: string, quantity: number }[] = [];
 
 // --- HELPER PARA FORMATAÇÃO NUMÉRICA SEGURA ---
 const formatPrice = (val: any): string => {
@@ -323,12 +323,22 @@ function loadHome() {
 
 (window as any).addItem = () => {
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
+    const qIn = document.getElementById('select-quantity') as HTMLInputElement;
     if (pSel.disabled || !pSel.value) return;
+    
     const prodName = pSel.value;
-    if (!shoppingList.includes(prodName)) {
-        shoppingList.push(prodName);
-        updateListDisplay();
+    const quantity = parseInt(qIn.value) || 1;
+    
+    // Verifica se já existe para atualizar quantidade ou adicionar novo
+    const existing = shoppingList.find(i => i.name === prodName);
+    if (existing) {
+        existing.quantity += quantity;
+    } else {
+        shoppingList.push({ name: prodName, quantity });
     }
+    
+    qIn.value = "1";
+    updateListDisplay();
 };
 
 function updateListDisplay() {
@@ -336,16 +346,21 @@ function updateListDisplay() {
     const a = document.getElementById('action-compare');
     if (!c) return;
     c.innerHTML = shoppingList.map(item => `
-        <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border">
-            <span class="font-bold">${item}</span>
-            <button onclick="removeItem('${item}')" class="text-red-400">Remover</button>
+        <div class="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div class="flex items-center gap-3">
+                <span class="w-8 h-8 bg-emerald-100 text-emerald-700 flex items-center justify-center rounded-lg text-xs font-black">${item.quantity}</span>
+                <span class="font-bold text-gray-700">${item.name}</span>
+            </div>
+            <button onclick="removeItem('${item.name}')" class="text-red-400 hover:text-red-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
         </div>
     `).join('');
     a?.classList.toggle('hidden', shoppingList.length === 0);
 }
 
 (window as any).removeItem = (name: string) => {
-    shoppingList = shoppingList.filter(i => i !== name);
+    shoppingList = shoppingList.filter(i => i.name !== name);
     updateListDisplay();
 };
 
@@ -355,42 +370,72 @@ function updateListDisplay() {
     if (!res) return;
 
     let html = `
-        <div class="bg-white rounded-3xl border overflow-hidden">
-            <div class="p-6 bg-emerald-50 border-b flex justify-between">
-                <h3 class="font-black">Resultados da Pesquisa</h3>
-                <button onclick="generatePDF()" class="text-xs font-bold text-emerald-600">PDF</button>
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden animate-in">
+            <div class="p-6 bg-emerald-50 border-b flex justify-between items-center">
+                <div>
+                    <h3 class="font-black text-emerald-900 tracking-tight uppercase">Comparativo Detalhado</h3>
+                    <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Baseado na sua lista de quantidades</p>
+                </div>
+                <button onclick="generatePDF()" class="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-100 shadow-sm hover:bg-emerald-600 hover:text-white transition-all">Exportar PDF</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 text-[10px] font-black uppercase">
-                        <tr><th class="p-4">Item</th>${markets.map(m => `<th class="p-4 text-center">${m.name}</th>`).join('')}</tr>
+                    <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-500">
+                        <tr>
+                            <th class="p-4 border-r">Item x Qtd</th>
+                            ${markets.map(m => `<th class="p-4 text-center border-r min-w-[120px]">${m.name}</th>`).join('')}
+                        </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody class="divide-y text-sm">
     `;
 
     let totals: any = {};
     markets.forEach(m => totals[m.name] = 0);
 
     shoppingList.forEach(item => {
-        html += `<tr><td class="p-4 font-bold">${item}</td>`;
+        html += `<tr><td class="p-4 border-r font-medium text-gray-600"><span class="font-black text-gray-900">${item.name}</span> <span class="text-xs text-gray-400">x ${item.quantity}</span></td>`;
         markets.forEach(m => {
-            const priceObj = db.query('SELECT * FROM prices').find(p => p.market === m.name && p.product === item);
-            const val = priceObj ? parseFloat(priceObj.price) : 0;
-            totals[m.name] += isNaN(val) ? 0 : val;
-            html += `<td class="p-4 text-center ${val ? '' : 'text-gray-300'}">${val ? 'R$ ' + val.toFixed(2) : '-'}</td>`;
+            const priceObj = db.query('SELECT * FROM prices').find(p => p.market === m.name && p.product === item.name);
+            const unitPrice = priceObj ? parseFloat(priceObj.price) : 0;
+            const lineTotal = unitPrice * item.quantity;
+            
+            totals[m.name] += isNaN(lineTotal) ? 0 : lineTotal;
+            
+            html += `
+                <td class="p-4 text-center border-r ${lineTotal ? '' : 'bg-gray-50/50'}">
+                    ${lineTotal ? `
+                        <div class="font-black text-gray-800">R$ ${lineTotal.toFixed(2)}</div>
+                        <div class="text-[9px] font-bold text-gray-400 uppercase">Un: R$ ${unitPrice.toFixed(2)}</div>
+                    ` : '<span class="text-gray-300 font-bold italic text-xs">Indisponível</span>'}
+                </td>`;
         });
         html += `</tr>`;
     });
 
-    html += `<tr class="bg-gray-50 font-black"><td class="p-4">TOTAL</td>`;
+    // Linha de Totais com destaque para o menor preço
+    const marketValues = markets.map(m => ({ name: m.name, total: totals[m.name] }));
+    const validTotals = marketValues.filter(mv => mv.total > 0);
+    const minTotal = validTotals.length > 0 ? Math.min(...validTotals.map(mv => mv.total)) : 0;
+
+    html += `
+        <tr class="bg-emerald-900 text-white font-black">
+            <td class="p-6 border-r uppercase tracking-widest">TOTAL DA LISTA</td>
+    `;
+    
     markets.forEach(m => {
         const total = totals[m.name];
-        html += `<td class="p-4 text-center text-emerald-600">R$ ${total.toFixed(2)}</td>`;
+        const isBest = total > 0 && total === minTotal;
+        html += `
+            <td class="p-6 text-center border-r ${isBest ? 'bg-emerald-500' : ''}">
+                <div class="text-xl">R$ ${total.toFixed(2)}</div>
+                ${isBest ? '<div class="text-[8px] font-black uppercase tracking-tighter mt-1 bg-white/20 px-1 rounded">MELHOR OPÇÃO</div>' : ''}
+            </td>`;
     });
 
     html += `</tr></tbody></table></div></div>`;
     res.innerHTML = html;
     res.classList.remove('hidden');
+    res.scrollIntoView({ behavior: 'smooth' });
 };
 
 // --- UTILS ---
@@ -420,7 +465,6 @@ function populateDropdown(id: string, table: string) {
     (window as any).onCategoryChangePrice();
     (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
     
-    // Garante que o valor no input de edição esteja no formato numérico correto para o browser
     const numericValue = parseFloat(price.price);
     (document.getElementById('price-price') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
     
@@ -437,7 +481,14 @@ function showToast(m: string) {
 (window as any).generatePDF = () => {
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
-    doc.text("Relatório SuperCompare", 10, 10);
-    shoppingList.forEach((it, i) => doc.text(`${i+1}. ${it}`, 10, 20 + (i*10)));
-    doc.save("pesquisa.pdf");
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório SuperCompare PRO", 10, 10);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    
+    shoppingList.forEach((it, i) => {
+        doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 10, 25 + (i*8));
+    });
+    
+    doc.save("pesquisa_precos.pdf");
 };

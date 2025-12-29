@@ -83,8 +83,8 @@
             <div id="view-home" class="animate-in space-y-8">
                 <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
                     <h2 class="text-xs font-black uppercase text-gray-400 tracking-widest mb-6">Monte sua Lista de Compras</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 items-end">
+                        <div class="md:col-span-1">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Categoria</label>
                             <select id="select-category" onchange="onCategoryChangeHome()" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"></select>
                         </div>
@@ -94,7 +94,13 @@
                                 <option>Aguardando categoria...</option>
                             </select>
                         </div>
-                        <button onclick="addItem()" class="py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Adicionar</button>
+                        <div class="md:col-span-1">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
+                            <input type="number" id="select-quantity" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button onclick="addItem()" class="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Adicionar</button>
+                        </div>
                     </div>
                     <div id="shopping-list-container" class="mt-8 space-y-3"></div>
                     <div id="action-compare" class="hidden mt-10 flex justify-center border-t pt-8">
