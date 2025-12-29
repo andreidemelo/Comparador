@@ -14,11 +14,9 @@ class Database {
             if (action === 'SELECT') {
                 let query = supabase.from(table).select('*');
                 
-                // Aplica ordenação alfabética por padrão para tabelas de cadastro
                 if (['cities', 'markets', 'categories', 'products', 'users'].includes(table)) {
                     query = query.order('name', { ascending: true });
                 } else if (table === 'prices') {
-                    // Ordena preços por mercado e produto para melhor visualização
                     query = query.order('market', { ascending: true }).order('product', { ascending: true });
                 }
 
@@ -58,10 +56,16 @@ const db = new Database();
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
 
-// --- HELPER PARA FORMATAÇÃO NUMÉRICA SEGURA ---
+// --- HELPERS ---
 const formatPrice = (val: any): string => {
     const num = parseFloat(val);
     return isNaN(num) ? "0.00" : num.toFixed(2);
+};
+
+const formatDate = (iso: string): string => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
 // --- INIT ---
@@ -149,14 +153,23 @@ if (authForm) {
 // --- RENDERERS ---
 
 async function renderAdminUsers() {
+    populateDropdown('user-admin-city', 'cities');
     const t = document.getElementById('table-users-body');
     if (!t) return;
     const users = await db.query('users', 'SELECT');
     t.innerHTML = users.map(u => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${u.name}</td>
-            <td class="p-4">${u.city}</td>
-            <td class="p-4 text-right">${u.name !== 'administrador' ? `<button onclick="deleteRow('users', ${u.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button>` : 'LOCK'}</td>
+        <tr class="border-b text-xs">
+            <td class="p-4 font-bold text-gray-800">${u.name}</td>
+            <td class="p-4 text-gray-500">${u.email || '-'}</td>
+            <td class="p-4 font-medium">${u.city || '-'}</td>
+            <td class="p-4 text-gray-400 font-mono">${formatDate(u.created_at)}</td>
+            <td class="p-4 text-gray-400 italic">${u.password}</td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                ${u.name !== 'administrador' ? `
+                    <button onclick="editUser(${u.id})" class="text-blue-500 font-black uppercase hover:underline">Alterar</button>
+                    <button onclick="deleteRow('users', ${u.id})" class="text-red-500 font-black uppercase hover:underline">Excluir</button>
+                ` : '<span class="text-gray-300 font-black uppercase">Protegido</span>'}
+            </td>
         </tr>
     `).join('');
 }
@@ -231,31 +244,27 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         e.preventDefault();
         const data: any = {};
         
-        const editIdField = document.getElementById('price-id') as HTMLInputElement;
+        // Verifica se há ID para UPDATE (padrão admin-id ou price-id)
+        const idBase = id.split('-')[1]; // Ex: form-user-admin -> user
+        const editIdField = document.getElementById(`${id.includes('user') ? 'user-admin' : idBase}-id`) as HTMLInputElement;
         const editId = editIdField ? editIdField.value : null;
 
         fields.forEach(fid => {
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                if (fid === 'price-price') val = parseFloat(val) || 0;
+                if (fid.includes('price')) val = parseFloat(val) || 0;
                 data[fid.split('-').pop()!] = val;
             }
         });
 
-        if (table === 'prices') {
-            data.updatedAt = new Date().toLocaleString('pt-BR');
-            if (editId) {
-                await db.query('prices', 'UPDATE', { id: editId, data });
-                showToast('Preço atualizado!');
-                if (editIdField) editIdField.value = '';
-            } else {
-                await db.query('prices', 'INSERT', data);
-                showToast('Preço cadastrado!');
-            }
+        if (editId) {
+            await db.query(table, 'UPDATE', { id: editId, data });
+            showToast('Registro atualizado!');
+            if (editIdField) editIdField.value = '';
         } else {
             await db.query(table, 'INSERT', data);
-            showToast('Gravado com sucesso no Supabase!');
+            showToast('Gravado com sucesso!');
         }
 
         (e.target as HTMLFormElement).reset();
@@ -268,6 +277,7 @@ setupForm('form-market', 'markets', ['market-name', 'market-city', 'market-bairr
 setupForm('form-category', 'categories', ['category-name'], renderAdminCategories);
 setupForm('form-product', 'products', ['product-name', 'product-category'], renderAdminProducts);
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
+setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
 
 // --- CASCADING SELECTS ---
 (window as any).onCategoryChangePrice = async () => {
@@ -425,12 +435,12 @@ async function populateDropdown(id: string, table: string) {
     const el = document.getElementById(id) as HTMLSelectElement;
     if (!el) return;
     const data = await db.query(table, 'SELECT');
-    el.innerHTML = (id.includes('auth') || id.includes('select') || id.includes('price')) ? '<option value="">Selecionar...</option>' : '';
+    el.innerHTML = (id.includes('auth') || id.includes('select') || id.includes('price') || id.includes('admin')) ? '<option value="">Selecionar...</option>' : '';
     el.innerHTML += data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
 
 (window as any).deleteRow = async (table: string, id: any) => {
-    if (confirm('Deletar registro?')) {
+    if (confirm('Deletar registro permanentemente?')) {
         await db.query(table, 'DELETE', id);
         showView(`admin-${table}`);
     }
@@ -453,6 +463,21 @@ async function populateDropdown(id: string, table: string) {
     
     document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
     showToast('Modo de edição ativado');
+};
+
+(window as any).editUser = async (id: any) => {
+    const users = await db.query('users', 'SELECT');
+    const u = users.find(x => x.id == id);
+    if (!u) return;
+
+    (document.getElementById('user-admin-id') as HTMLInputElement).value = u.id;
+    (document.getElementById('user-admin-name') as HTMLInputElement).value = u.name;
+    (document.getElementById('user-admin-email') as HTMLInputElement).value = u.email || '';
+    (document.getElementById('user-admin-city') as HTMLSelectElement).value = u.city || '';
+    (document.getElementById('user-admin-password') as HTMLInputElement).value = u.password;
+
+    document.getElementById('form-user-admin')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando usuário: ' + u.name);
 };
 
 function showToast(m: string) {
