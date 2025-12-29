@@ -149,7 +149,7 @@
                     </button>
                     <button onclick="showView('admin-categories')" class="admin-card bg-white p-8 rounded-3xl border border-gray-100 flex flex-col items-center text-center group">
                         <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M11 7h.01M11 11h.01M11 15h.01M15 7h.01M15 11h.01M15 15h.01M19 7h.01M19 11h.01M19 15h.01M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M11 7h.01M11 11h.01M11 15h.01M15 7h.01M15 11h.01M15 15h.01M19 7h.01M19 11h.01M19 15h.01M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </div>
                         <span class="text-lg font-black text-gray-800 uppercase tracking-tight">Categorias</span>
                         <span class="text-xs font-bold text-gray-400 mt-2">Organização</span>
@@ -416,18 +416,34 @@
             document.getElementById('btn-tab-login').className = mode === 'login' ? "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600" : "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
             document.getElementById('btn-tab-register').className = mode === 'register' ? "flex-1 py-2 text-xs font-black uppercase rounded-lg bg-white shadow-sm text-emerald-600" : "flex-1 py-2 text-xs font-black uppercase rounded-lg text-gray-400";
             document.getElementById('btn-auth-submit').textContent = mode === 'login' ? "Acessar App" : "Confirmar Cadastro";
+            
+            // Limpa mensagens de erro e sucesso ao trocar de aba
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-success').classList.add('hidden');
         };
 
         document.getElementById('form-auth').onsubmit = (e) => {
             e.preventDefault();
             const name = document.getElementById('auth-username').value;
             const pass = document.getElementById('auth-password').value;
+            const errorEl = document.getElementById('auth-error');
+            const successEl = document.getElementById('auth-success');
+            
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
             const users = JSON.parse(localStorage.getItem('supercompare_users_db') || '[]');
 
             if (authMode === 'register') {
-                if (users.find(u => u.name.toLowerCase() === name.toLowerCase())) return alert("Já existe");
+                if (users.find(u => u.name.toLowerCase() === name.toLowerCase())) {
+                    errorEl.textContent = "Erro: Este usuário já existe.";
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
                 users.push({ name, password: pass });
                 localStorage.setItem('supercompare_users_db', JSON.stringify(users));
+                successEl.textContent = "Sucesso! Conta criada. Agora faça login.";
+                successEl.classList.remove('hidden');
                 setAuthMode('login');
             } else {
                 const user = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.password === pass);
@@ -435,7 +451,10 @@
                     currentUser = user.name;
                     localStorage.setItem('supercompare_session', JSON.stringify({ name: user.name }));
                     enterApp();
-                } else alert("Erro");
+                } else {
+                    errorEl.textContent = "Erro: Usuário ou senha incorretos";
+                    errorEl.classList.remove('hidden');
+                }
             }
         };
 
