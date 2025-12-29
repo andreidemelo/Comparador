@@ -221,19 +221,24 @@ function renderAdminPrices() {
     populateDropdown('price-category', 'categories');
     const t = document.getElementById('table-prices-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM prices').map(p => `
-        <tr class="border-b">
-            <!-- Exibição puramente numérica conforme solicitado -->
-            <td class="p-4 font-black text-emerald-600">${parseFloat(p.price).toFixed(2)}</td>
-            <td class="p-4 font-bold">${p.market}</td>
-            <td class="p-4">${p.product}</td>
-            <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
-                <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase">Alterar</button>
-                <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase">Excluir</button>
-            </td>
-        </tr>
-    `).join('');
+    t.innerHTML = db.query('SELECT * FROM prices').map(p => {
+        // Correção para o erro NaN: Garantimos um valor numérico antes do toFixed
+        const numericPrice = parseFloat(p.price);
+        const displayPrice = isNaN(numericPrice) ? "0.00" : numericPrice.toFixed(2);
+        
+        return `
+            <tr class="border-b">
+                <td class="p-4 font-black text-emerald-600">${displayPrice}</td>
+                <td class="p-4 font-bold">${p.market}</td>
+                <td class="p-4">${p.product}</td>
+                <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
+                <td class="p-4 text-right flex justify-end gap-3">
+                    <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase">Alterar</button>
+                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase">Excluir</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // --- FORM HANDLERS ---
@@ -244,7 +249,6 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         e.preventDefault();
         const data: any = {};
         
-        // Verifica se há ID de edição (específico para preços)
         const editIdField = document.getElementById('price-id') as HTMLInputElement;
         const editId = editIdField ? editIdField.value : null;
 
@@ -252,9 +256,10 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                // Ao salvar preço, garantimos que é um número formatado com 2 casas decimais
+                // Ao salvar preço, garantimos que é um número válido ou 0.00
                 if (fid === 'price-value') {
-                    val = parseFloat(val).toFixed(2);
+                    const parsed = parseFloat(val);
+                    val = isNaN(parsed) ? "0.00" : parsed.toFixed(2);
                 }
                 data[fid.split('-').pop()!] = val;
             }
@@ -366,7 +371,7 @@ function updateListDisplay() {
         markets.forEach(m => {
             const priceObj = db.query('SELECT * FROM prices').find(p => p.market === m.name && p.product === item);
             const val = priceObj ? parseFloat(priceObj.price) : 0;
-            totals[m.name] += val;
+            totals[m.name] += isNaN(val) ? 0 : val;
             html += `<td class="p-4 text-center ${val ? '' : 'text-gray-300'}">${val ? 'R$ ' + val.toFixed(2) : '-'}</td>`;
         });
         html += `</tr>`;
@@ -374,7 +379,8 @@ function updateListDisplay() {
 
     html += `<tr class="bg-gray-50 font-black"><td class="p-4">TOTAL</td>`;
     markets.forEach(m => {
-        html += `<td class="p-4 text-center text-emerald-600">R$ ${totals[m.name].toFixed(2)}</td>`;
+        const total = totals[m.name];
+        html += `<td class="p-4 text-center text-emerald-600">R$ ${total.toFixed(2)}</td>`;
     });
 
     html += `</tr></tbody></table></div></div>`;
@@ -402,18 +408,15 @@ function populateDropdown(id: string, table: string) {
     const price = db.query('SELECT * FROM prices').find(p => p.id == id);
     if (!price) return;
 
-    // Preenche os campos do formulário
     (document.getElementById('price-id') as HTMLInputElement).value = price.id;
     (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
     (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
     
-    // Atualiza cascata de produtos
     (window as any).onCategoryChangePrice();
     (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
     
     (document.getElementById('price-value') as HTMLInputElement).value = price.price;
     
-    // Scroll suave para o formulário
     document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
     showToast('Modo de edição ativado');
 };
