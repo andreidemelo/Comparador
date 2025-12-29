@@ -678,16 +678,6 @@
 
             const optimizedByStore = {};
             
-            // Pré-calcula médias para usar no PDF
-            const averages = {};
-            shoppingList.forEach(item => {
-                const prices = comparisonResults.map(res => {
-                    const pi = res.items.find(p => p.productName === item.name);
-                    return pi ? pi.price : 0;
-                });
-                averages[item.name] = prices.reduce((a, b) => a + b, 0) / prices.length;
-            });
-
             shoppingList.forEach(item => {
                 const prices = comparisonResults.map(res => ({
                     store: res.storeName,
@@ -704,92 +694,40 @@
                     category: item.category,
                     qty: item.quantity,
                     unitPrice: bestOption.price,
-                    totalPrice: bestOption.price * item.quantity,
-                    avgUnitPrice: averages[item.name]
+                    totalPrice: bestOption.price * item.quantity
                 });
             });
 
             let totalGeral = 0;
 
             Object.entries(optimizedByStore).forEach(([store, items]) => {
-                if (y > 230) { doc.addPage(); y = 20; }
+                if (y > 250) { doc.addPage(); y = 20; }
                 
-                // Nome do Supermercado (Prefixo removido)
                 doc.setFont("helvetica", "bold");
                 doc.setTextColor(16, 185, 129); // Emerald 600
-                doc.setFontSize(14);
-                doc.text(store, 20, y);
-                y += 10;
-                
-                // Cabeçalho da Tabela
-                doc.setFontSize(9);
-                doc.setTextColor(150, 150, 150);
-                doc.text("CATEGORIA", 20, y);
-                doc.text("PRODUTO", 55, y);
-                doc.text("QTD", 115, y);
-                doc.text("PREÇO", 135, y);
-                doc.text("TOTAL", 175, y);
-                y += 5;
-                doc.setDrawColor(240, 240, 240);
-                doc.line(20, y, 190, y);
+                doc.text(`Ir para: ${store}`, 20, y);
                 y += 7;
-
+                
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(0, 0, 0);
                 doc.setFontSize(10);
                 
                 let storeTotal = 0;
-                let storeTotalSaved = 0;
-
                 items.forEach(it => {
-                    if (y > 270) { doc.addPage(); y = 20; }
-                    
-                    // Categoria
-                    doc.setFontSize(8);
-                    doc.setTextColor(150, 150, 150);
-                    doc.text(it.category.toUpperCase(), 20, y);
-                    
-                    // Produto
-                    doc.setFontSize(10);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(it.name, 55, y);
-                    
-                    // Quantidade
-                    doc.text(it.qty.toString(), 115, y);
-                    
-                    // Preço Unitário e % de Redução
-                    doc.text(`R$ ${it.unitPrice.toFixed(2)}`, 135, y);
-                    const reductionPct = it.avgUnitPrice > 0 ? (((it.avgUnitPrice - it.unitPrice) / it.avgUnitPrice) * 100).toFixed(0) : 0;
-                    doc.setFontSize(7);
-                    doc.setTextColor(16, 185, 129);
-                    doc.text(`-${reductionPct}% vs média`, 135, y + 4);
-                    
-                    // Valor Total
-                    doc.setFontSize(10);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 175, y);
-                    
+                    doc.text(`${it.qty}x ${it.name} (${it.category})`, 25, y);
+                    doc.text(`R$ ${it.unitPrice.toFixed(2)} un.`, 120, y);
+                    doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 170, y);
                     storeTotal += it.totalPrice;
-                    // Economia = (Média - Preço) * Qtd
-                    storeTotalSaved += (it.avgUnitPrice - it.unitPrice) * it.qty;
-                    y += 12; // Espaçamento maior para caber o texto de redução
+                    y += 6;
                 });
                 
-                // Rodapé do Supermercado
                 doc.setFont("helvetica", "bold");
-                doc.text(`Total no ${store}: R$ ${storeTotal.toFixed(2)}`, 130, y);
-                y += 6;
-                doc.setTextColor(16, 185, 129);
-                doc.text(`Economia neste Mercado: R$ ${storeTotalSaved.toFixed(2)}`, 130, y);
-                
-                y += 15;
+                doc.text(`Total no ${store}: R$ ${storeTotal.toFixed(2)}`, 140, y);
+                y += 12;
                 totalGeral += storeTotal;
             });
 
-            // Resumo Final
-            if (y > 250) { doc.addPage(); y = 20; }
             doc.setFontSize(14);
-            doc.setTextColor(0, 0, 0);
             doc.text(`Valor Total Estimado da Compra: R$ ${totalGeral.toFixed(2)}`, 20, y);
 
             doc.save("lista_de_compras_supercompare.pdf");
