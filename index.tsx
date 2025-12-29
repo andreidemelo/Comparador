@@ -81,6 +81,12 @@ const db = new Database();
 let currentUser: any = null;
 let shoppingList: any[] = [];
 
+// --- HELPER PARA FORMATAÇÃO NUMÉRICA SEGURA ---
+const formatPrice = (val: any): string => {
+    const num = parseFloat(val);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
+};
+
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
     initDefaultAdmin();
@@ -221,10 +227,10 @@ function renderAdminPrices() {
     populateDropdown('price-category', 'categories');
     const t = document.getElementById('table-prices-body');
     if (!t) return;
+    
     t.innerHTML = db.query('SELECT * FROM prices').map(p => {
-        // Correção para o erro NaN: Garantimos um valor numérico antes do toFixed
-        const numericPrice = parseFloat(p.price);
-        const displayPrice = isNaN(numericPrice) ? "0.00" : numericPrice.toFixed(2);
+        // Usa helper para garantir exibição numérica sem NaN
+        const displayPrice = formatPrice(p.price);
         
         return `
             <tr class="border-b">
@@ -256,10 +262,9 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                // Ao salvar preço, garantimos que é um número válido ou 0.00
+                // Tratamento rigoroso de salvamento para consistência total de tipo
                 if (fid === 'price-value') {
-                    const parsed = parseFloat(val);
-                    val = isNaN(parsed) ? "0.00" : parsed.toFixed(2);
+                    val = formatPrice(val);
                 }
                 data[fid.split('-').pop()!] = val;
             }
@@ -269,11 +274,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             data.updatedAt = new Date().toLocaleString('pt-BR');
             if (editId) {
                 db.query(`UPDATE prices`, [editId, data]);
-                showToast('Preço alterado com sucesso!');
+                showToast('Preço atualizado com sucesso!');
                 if (editIdField) editIdField.value = '';
             } else {
                 db.query(`INSERT INTO ${table}`, [data]);
-                showToast('Preço gravado com sucesso!');
+                showToast('Preço cadastrado com sucesso!');
             }
         } else {
             db.query(`INSERT INTO ${table}`, [data]);
@@ -415,7 +420,9 @@ function populateDropdown(id: string, table: string) {
     (window as any).onCategoryChangePrice();
     (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
     
-    (document.getElementById('price-value') as HTMLInputElement).value = price.price;
+    // Garante que o valor no input de edição esteja no formato numérico correto para o browser
+    const numericValue = parseFloat(price.price);
+    (document.getElementById('price-value') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
     
     document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
     showToast('Modo de edição ativado');
