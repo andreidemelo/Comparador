@@ -1,6 +1,6 @@
 {
-  "name": "SuperCompare PRO - SQL Local",
-  "description": "App de comparação de preços independente de APIs externas, utilizando motor relacional simulado no navegador.",
+  "name": "SuperCompare PRO - Supabase Cloud",
+  "description": "App de comparação de preços sincronizado em tempo real utilizando Supabase Cloud como backend relacional.",
   "requestFramePermissions": [
     "geolocation"
   ]

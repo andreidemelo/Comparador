@@ -1,76 +1,44 @@
 
-// --- MOTOR SQL SIMULADO (localStorage persistency) ---
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+// --- CONFIGURAÇÃO REAL DO SUPABASE ---
+const SUPABASE_URL = 'https://zagebrolhkzdqezmijdi.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8PbA4ZgMUEYzTRzGhyvMzA_5xebA4Tu';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- MOTOR SQL ADAPTADO PARA SUPABASE ---
 class Database {
-    private tables: Record<string, any[]> = {};
-
-    constructor() {
-        this.load();
-    }
-
-    private load() {
-        this.tables.users = JSON.parse(localStorage.getItem('db_users') || '[]');
-        this.tables.cities = JSON.parse(localStorage.getItem('db_cities') || '[]');
-        this.tables.markets = JSON.parse(localStorage.getItem('db_markets') || '[]');
-        this.tables.categories = JSON.parse(localStorage.getItem('db_categories') || '[]');
-        this.tables.products = JSON.parse(localStorage.getItem('db_products') || '[]');
-        this.tables.prices = JSON.parse(localStorage.getItem('db_prices') || '[]');
-    }
-
-    private save() {
-        localStorage.setItem('db_users', JSON.stringify(this.tables.users));
-        localStorage.setItem('db_cities', JSON.stringify(this.tables.cities));
-        localStorage.setItem('db_markets', JSON.stringify(this.tables.markets));
-        localStorage.setItem('db_categories', JSON.stringify(this.tables.categories));
-        localStorage.setItem('db_products', JSON.stringify(this.tables.products));
-        localStorage.setItem('db_prices', JSON.stringify(this.tables.prices));
-    }
-
-    query(sql: string, params: any[] = []): any[] {
-        const parts = sql.trim().toUpperCase().split(/\s+/);
-        const command = parts[0];
-        let table = '';
-
-        if (command === 'SELECT' || command === 'DELETE' || command === 'UPDATE') {
-            const fromIndex = parts.indexOf('FROM') !== -1 ? parts.indexOf('FROM') : parts.indexOf('UPDATE') !== -1 ? parts.indexOf('UPDATE') : -1;
-            if (fromIndex !== -1) {
-                table = parts[fromIndex + 1].toLowerCase();
+    async query(table: string, action: 'SELECT' | 'INSERT' | 'DELETE' | 'UPDATE', params: any = null): Promise<any[]> {
+        try {
+            if (action === 'SELECT') {
+                const { data, error } = await supabase.from(table).select('*');
+                if (error) throw error;
+                return data || [];
             }
-        } else if (command === 'INSERT') {
-            const intoIndex = parts.indexOf('INTO');
-            if (intoIndex !== -1) table = parts[intoIndex + 1].toLowerCase();
-        }
 
-        if (!table || !this.tables[table]) return [];
+            if (action === 'INSERT') {
+                const { data, error } = await supabase.from(table).insert([params]).select();
+                if (error) throw error;
+                return data || [];
+            }
 
-        if (command === 'SELECT') {
-            return [...this.tables[table]];
-        }
+            if (action === 'DELETE') {
+                const { error } = await supabase.from(table).delete().eq('id', params);
+                if (error) throw error;
+                return [];
+            }
 
-        if (command === 'INSERT') {
-            const data = { ...params[0], id: Date.now() };
-            this.tables[table].push(data);
-            this.save();
-            return [data];
-        }
-
-        if (command === 'DELETE') {
-            const id = params[0];
-            this.tables[table] = this.tables[table].filter(row => row.id != id);
-            this.save();
+            if (action === 'UPDATE') {
+                const { data, error } = await supabase.from(table).update(params.data).eq('id', params.id).select();
+                if (error) throw error;
+                return data || [];
+            }
+        } catch (err) {
+            console.error(`Erro na operação ${action} em ${table}:`, err);
+            // Se as tabelas ainda não existirem no Supabase, avisamos no console
             return [];
         }
-
-        if (command === 'UPDATE') {
-            const id = params[0];
-            const newData = params[1];
-            const index = this.tables[table].findIndex(row => row.id == id);
-            if (index !== -1) {
-                this.tables[table][index] = { ...this.tables[table][index], ...newData };
-                this.save();
-                return [this.tables[table][index]];
-            }
-        }
-
         return [];
     }
 }
@@ -88,20 +56,9 @@ const formatPrice = (val: any): string => {
 };
 
 // --- INIT ---
-document.addEventListener('DOMContentLoaded', () => {
-    initDefaultAdmin();
+document.addEventListener('DOMContentLoaded', async () => {
     checkSession();
 });
-
-function initDefaultAdmin() {
-    const users = db.query('SELECT * FROM users');
-    if (!users.find(u => u.name === 'administrador')) {
-        db.query('INSERT INTO users', [{
-            name: 'administrador', password: 'Mu@300413', email: 'admin@super.com',
-            city: 'Sistema', createdAt: new Date().toISOString()
-        }]);
-    }
-}
 
 function checkSession() {
     const session = localStorage.getItem('app_session');
@@ -112,7 +69,7 @@ function checkSession() {
 }
 
 // --- NAVIGATION ---
-const showView = (vId: string) => {
+const showView = async (vId: string) => {
     document.querySelectorAll('#main-app main > div').forEach(d => d.classList.add('hidden'));
     const t = document.getElementById(`view-${vId}`);
     if (t) {
@@ -128,7 +85,7 @@ const showView = (vId: string) => {
 };
 (window as any).showView = showView;
 
-function renderApp() {
+async function renderApp() {
     document.getElementById('auth-section')?.classList.add('hidden');
     document.getElementById('main-app')?.classList.remove('hidden');
     const hN = document.getElementById('header-user-name');
@@ -145,7 +102,7 @@ function renderApp() {
 // --- AUTH ---
 const authForm = document.getElementById('form-auth');
 if (authForm) {
-    authForm.onsubmit = (e) => {
+    authForm.onsubmit = async (e) => {
         e.preventDefault();
         const uIn = (document.getElementById('auth-username') as HTMLInputElement).value;
         const pIn = (document.getElementById('auth-password') as HTMLInputElement).value;
@@ -154,17 +111,23 @@ if (authForm) {
         if (mode === 'register') {
             const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
             const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
-            db.query('INSERT INTO users', [{ name: uIn, email: eIn, city: cIn, password: pIn, createdAt: new Date().toISOString() }]);
-            showToast('Cadastrado! Faça login.'); (window as any).setAuthMode('login');
+            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
+            showToast('Cadastrado com sucesso!'); (window as any).setAuthMode('login');
         } else {
-            const u = db.query('SELECT * FROM users').find(u => u.name === uIn && u.password === pIn);
-            if (u) { currentUser = u; localStorage.setItem('app_session', JSON.stringify(u)); renderApp(); }
-            else { showToast('Erro de login'); }
+            const users = await db.query('users', 'SELECT');
+            const u = users.find(u => u.name === uIn && u.password === pIn);
+            if (u) { 
+                currentUser = u; 
+                localStorage.setItem('app_session', JSON.stringify(u)); 
+                renderApp(); 
+            } else { 
+                showToast('Usuário ou senha incorretos'); 
+            }
         }
     };
 }
 
-(window as any).setAuthMode = (mode: string) => {
+(window as any).setAuthMode = async (mode: string) => {
     const btnL = document.getElementById('btn-tab-login');
     const btnR = document.getElementById('btn-tab-register');
     const regF = document.getElementById('register-fields');
@@ -176,10 +139,11 @@ if (authForm) {
 
 // --- RENDERERS ---
 
-function renderAdminUsers() {
+async function renderAdminUsers() {
     const t = document.getElementById('table-users-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM users').map(u => `
+    const users = await db.query('users', 'SELECT');
+    t.innerHTML = users.map(u => `
         <tr class="border-b">
             <td class="p-4 font-bold">${u.name}</td>
             <td class="p-4">${u.city}</td>
@@ -188,50 +152,53 @@ function renderAdminUsers() {
     `).join('');
 }
 
-function renderAdminCities() {
+async function renderAdminCities() {
     const t = document.getElementById('table-cities-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM cities').map(c => `
+    const cities = await db.query('cities', 'SELECT');
+    t.innerHTML = cities.map(c => `
         <tr class="border-b"><td class="p-4 font-bold">${c.name}</td><td class="p-4">${c.state}</td><td class="p-4 text-right"><button onclick="deleteRow('cities', ${c.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
     `).join('');
 }
 
-function renderAdminMarkets() {
+async function renderAdminMarkets() {
     populateDropdown('market-city', 'cities');
     const t = document.getElementById('table-markets-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM markets').map(m => `
+    const markets = await db.query('markets', 'SELECT');
+    t.innerHTML = markets.map(m => `
         <tr class="border-b"><td class="p-4 font-bold">${m.name}</td><td class="p-4">${m.city}</td><td class="p-4 text-gray-400 text-xs">${m.bairro}</td><td class="p-4 text-right"><button onclick="deleteRow('markets', ${m.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
     `).join('');
 }
 
-function renderAdminCategories() {
+async function renderAdminCategories() {
     const t = document.getElementById('table-categories-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM categories').map(c => `
+    const categories = await db.query('categories', 'SELECT');
+    t.innerHTML = categories.map(c => `
         <tr class="border-b"><td class="p-4 font-bold">${c.name}</td><td class="p-4 text-right"><button onclick="deleteRow('categories', ${c.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
     `).join('');
 }
 
-function renderAdminProducts() {
+async function renderAdminProducts() {
     populateDropdown('product-category', 'categories');
     const t = document.getElementById('table-products-body');
     if (!t) return;
-    t.innerHTML = db.query('SELECT * FROM products').map(p => `
+    const products = await db.query('products', 'SELECT');
+    t.innerHTML = products.map(p => `
         <tr class="border-b"><td class="p-4 font-bold">${p.name}</td><td class="p-4 text-emerald-600 text-[10px] font-black uppercase">${p.category}</td><td class="p-4 text-right"><button onclick="deleteRow('products', ${p.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
     `).join('');
 }
 
-function renderAdminPrices() {
+async function renderAdminPrices() {
     populateDropdown('price-market', 'markets');
     populateDropdown('price-category', 'categories');
     const t = document.getElementById('table-prices-body');
     if (!t) return;
     
-    t.innerHTML = db.query('SELECT * FROM prices').map(p => {
-        // Usa helper para garantir exibição numérica sem NaN
+    const prices = await db.query('prices', 'SELECT');
+    t.innerHTML = prices.map(p => {
         const displayPrice = formatPrice(p.price);
-        
         return `
             <tr class="border-b">
                 <td class="p-4 font-black text-emerald-600">${displayPrice}</td>
@@ -251,7 +218,7 @@ function renderAdminPrices() {
 const setupForm = (id: string, table: string, fields: string[], callback?: Function) => {
     const f = document.getElementById(id);
     if (!f) return;
-    f.onsubmit = (e) => {
+    f.onsubmit = async (e) => {
         e.preventDefault();
         const data: any = {};
         
@@ -262,10 +229,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                // Tratamento rigoroso de salvamento para consistência total de tipo
-                if (fid === 'price-price') {
-                    val = formatPrice(val);
-                }
+                if (fid === 'price-price') val = parseFloat(val) || 0;
                 data[fid.split('-').pop()!] = val;
             }
         });
@@ -273,16 +237,16 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         if (table === 'prices') {
             data.updatedAt = new Date().toLocaleString('pt-BR');
             if (editId) {
-                db.query(`UPDATE prices`, [editId, data]);
-                showToast('Preço atualizado com sucesso!');
+                await db.query('prices', 'UPDATE', { id: editId, data });
+                showToast('Preço atualizado!');
                 if (editIdField) editIdField.value = '';
             } else {
-                db.query(`INSERT INTO ${table}`, [data]);
-                showToast('Preço cadastrado com sucesso!');
+                await db.query('prices', 'INSERT', data);
+                showToast('Preço cadastrado!');
             }
         } else {
-            db.query(`INSERT INTO ${table}`, [data]);
-            showToast('Gravado com sucesso!');
+            await db.query(table, 'INSERT', data);
+            showToast('Gravado com sucesso no Supabase!');
         }
 
         (e.target as HTMLFormElement).reset();
@@ -297,26 +261,28 @@ setupForm('form-product', 'products', ['product-name', 'product-category'], rend
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 
 // --- CASCADING SELECTS ---
-(window as any).onCategoryChangePrice = () => {
+(window as any).onCategoryChangePrice = async () => {
     const cat = (document.getElementById('price-category') as HTMLSelectElement).value;
     const pSel = document.getElementById('price-product') as HTMLSelectElement;
     if (!cat) { pSel.disabled = true; return; }
     pSel.disabled = false;
-    const prods = db.query('SELECT * FROM products').filter(p => p.category === cat);
+    const products = await db.query('products', 'SELECT');
+    const prods = products.filter(p => p.category === cat);
     pSel.innerHTML = '<option value="">Produto</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
 };
 
-(window as any).onCategoryChangeHome = () => {
+(window as any).onCategoryChangeHome = async () => {
     const cat = (document.getElementById('select-category') as HTMLSelectElement).value;
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     if (!cat) { pSel.disabled = true; return; }
     pSel.disabled = false;
-    const prods = db.query('SELECT * FROM products').filter(p => p.category === cat);
+    const products = await db.query('products', 'SELECT');
+    const prods = products.filter(p => p.category === cat);
     pSel.innerHTML = prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
 };
 
 // --- HOME LOGIC ---
-function loadHome() {
+async function loadHome() {
     populateDropdown('select-category', 'categories');
     updateListDisplay();
 }
@@ -338,7 +304,6 @@ function loadHome() {
     const prodName = pSel.value;
     const quantity = parseInt(qIn.value) || 1;
     
-    // Verifica se já existe para atualizar quantidade ou adicionar novo
     const existing = shoppingList.find(i => i.name === prodName);
     if (existing) {
         existing.quantity += quantity;
@@ -373,19 +338,20 @@ function updateListDisplay() {
     updateListDisplay();
 };
 
-(window as any).runComparison = () => {
+(window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
-    const markets = db.query('SELECT * FROM markets');
+    const markets = await db.query('markets', 'SELECT');
+    const prices = await db.query('prices', 'SELECT');
     if (!res) return;
 
     let html = `
         <div class="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden animate-in">
             <div class="p-6 bg-emerald-50 border-b flex justify-between items-center">
                 <div>
-                    <h3 class="font-black text-emerald-900 tracking-tight uppercase">Comparativo Detalhado</h3>
-                    <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Baseado na sua lista de quantidades</p>
+                    <h3 class="font-black text-emerald-900 tracking-tight uppercase">Comparativo Real (Supabase Cloud)</h3>
+                    <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Sincronizado com seu banco de dados</p>
                 </div>
-                <button onclick="generatePDF()" class="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-100 shadow-sm hover:bg-emerald-600 hover:text-white transition-all">Exportar PDF</button>
+                <button onclick="generatePDF()" class="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-100 shadow-sm">Exportar PDF</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -404,7 +370,7 @@ function updateListDisplay() {
     shoppingList.forEach(item => {
         html += `<tr><td class="p-4 border-r font-medium text-gray-600"><span class="font-black text-gray-900">${item.name}</span> <span class="text-xs text-gray-400">x ${item.quantity}</span></td>`;
         markets.forEach(m => {
-            const priceObj = db.query('SELECT * FROM prices').find(p => p.market === m.name && p.product === item.name);
+            const priceObj = prices.find(p => p.market === m.name && p.product === item.name);
             const unitPrice = priceObj ? parseFloat(priceObj.price) : 0;
             const lineTotal = unitPrice * item.quantity;
             
@@ -421,10 +387,8 @@ function updateListDisplay() {
         html += `</tr>`;
     });
 
-    // Linha de Totais com destaque para o menor preço
-    const marketValues = markets.map(m => ({ name: m.name, total: totals[m.name] }));
-    const validTotals = marketValues.filter(mv => mv.total > 0);
-    const minTotal = validTotals.length > 0 ? Math.min(...validTotals.map(mv => mv.total)) : 0;
+    const validTotals = Object.values(totals).filter((v: any) => v > 0);
+    const minTotal = validTotals.length > 0 ? Math.min(...(validTotals as number[])) : 0;
 
     html += `
         <tr class="bg-emerald-900 text-white font-black">
@@ -448,30 +412,31 @@ function updateListDisplay() {
 };
 
 // --- UTILS ---
-function populateDropdown(id: string, table: string) {
+async function populateDropdown(id: string, table: string) {
     const el = document.getElementById(id) as HTMLSelectElement;
     if (!el) return;
-    const data = db.query(`SELECT * FROM ${table}`);
+    const data = await db.query(table, 'SELECT');
     el.innerHTML = (id.includes('auth') || id.includes('select') || id.includes('price')) ? '<option value="">Selecionar...</option>' : '';
     el.innerHTML += data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
 
-(window as any).deleteRow = (table: string, id: any) => {
+(window as any).deleteRow = async (table: string, id: any) => {
     if (confirm('Deletar registro?')) {
-        db.query(`DELETE FROM ${table}`, [id]);
+        await db.query(table, 'DELETE', id);
         showView(`admin-${table}`);
     }
 };
 
-(window as any).editPrice = (id: any) => {
-    const price = db.query('SELECT * FROM prices').find(p => p.id == id);
+(window as any).editPrice = async (id: any) => {
+    const prices = await db.query('prices', 'SELECT');
+    const price = prices.find(p => p.id == id);
     if (!price) return;
 
     (document.getElementById('price-id') as HTMLInputElement).value = price.id;
     (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
     (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
     
-    (window as any).onCategoryChangePrice();
+    await (window as any).onCategoryChangePrice();
     (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
     
     const numericValue = parseFloat(price.price);
@@ -490,14 +455,7 @@ function showToast(m: string) {
 (window as any).generatePDF = () => {
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
-    doc.setFont("helvetica", "bold");
-    doc.text("Relatório SuperCompare PRO", 10, 10);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    
-    shoppingList.forEach((it, i) => {
-        doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 10, 25 + (i*8));
-    });
-    
+    doc.text("Relatório SuperCompare PRO (Supabase)", 10, 10);
+    shoppingList.forEach((it, i) => doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 10, 25 + (i*8)));
     doc.save("pesquisa_precos.pdf");
 };
