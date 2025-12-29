@@ -223,7 +223,7 @@ function renderAdminPrices() {
     if (!t) return;
     t.innerHTML = db.query('SELECT * FROM prices').map(p => `
         <tr class="border-b">
-            <td class="p-4 font-black text-emerald-600">R$ ${parseFloat(p.price).toFixed(2)}</td>
+            <td class="p-4 font-black text-emerald-600">${parseFloat(p.price).toFixed(2)}</td>
             <td class="p-4 font-bold">${p.market}</td>
             <td class="p-4">${p.product}</td>
             <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
@@ -263,11 +263,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             data.updatedAt = new Date().toLocaleString('pt-BR');
             if (editId) {
                 db.query(`UPDATE prices`, [editId, data]);
-                showToast('Registro alterado e convertido para R$ com sucesso!');
+                showToast('Registro alterado com sucesso!');
                 if (editIdField) editIdField.value = '';
             } else {
                 db.query(`INSERT INTO ${table}`, [data]);
-                showToast('Preço gravado e convertido para R$!');
+                showToast('Preço gravado com sucesso!');
             }
         } else {
             db.query(`INSERT INTO ${table}`, [data]);
