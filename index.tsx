@@ -250,7 +250,12 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         fields.forEach(fid => {
             const el = document.getElementById(fid) as any;
             if (el) {
-                data[fid.split('-').pop()!] = el.value;
+                let val = el.value;
+                // Ao salvar preço, garantimos que é um número formatado
+                if (fid === 'price-value') {
+                    val = parseFloat(val).toFixed(2);
+                }
+                data[fid.split('-').pop()!] = val;
             }
         });
 
@@ -258,11 +263,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             data.updatedAt = new Date().toLocaleString('pt-BR');
             if (editId) {
                 db.query(`UPDATE prices`, [editId, data]);
-                showToast('Registro alterado com sucesso!');
+                showToast('Registro alterado e convertido para R$ com sucesso!');
                 if (editIdField) editIdField.value = '';
             } else {
                 db.query(`INSERT INTO ${table}`, [data]);
-                showToast('Gravado com sucesso!');
+                showToast('Preço gravado e convertido para R$!');
             }
         } else {
             db.query(`INSERT INTO ${table}`, [data]);

@@ -191,14 +191,15 @@
                     <select id="price-market" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-category" onchange="onCategoryChangePrice()" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-product" class="p-3 bg-gray-50 rounded-xl border" required disabled><option value="">Produto</option></select>
-                    <input type="number" step="0.01" id="price-value" placeholder="R$ 0,00" class="p-3 bg-gray-50 rounded-xl border" required>
+                    <!-- Campo Numérico com 2 casas decimais e min 0 -->
+                    <input type="number" step="0.01" min="0" id="price-value" placeholder="R$ 0,00" class="p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" id="btn-save-price" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
                 <div class="bg-white rounded-3xl border overflow-hidden">
                     <table class="w-full text-left">
                         <thead class="bg-gray-50 text-[10px] font-black uppercase">
                             <tr>
-                                <th class="p-4">Preço</th>
+                                <th class="p-4">Preço (R$)</th>
                                 <th class="p-4">Mercado</th>
                                 <th class="p-4">Produto</th>
                                 <th class="p-4">Data/Hora</th>
