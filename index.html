@@ -603,14 +603,12 @@
             const table = document.getElementById('table-results');
             document.getElementById('results-display').classList.remove('hidden');
             
+            // Alterado: Colunas "melhor preço" e "preço médio" removidas
             let header = `<thead class="bg-gray-50"><tr>
                 <th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>
-                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>
-                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">melhor preço</th>`;
+                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>`;
             
             comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName}</th>`);
-            
-            header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-400 border-l border-gray-100">Preço Médio</th>`;
             header += "</tr></thead>";
 
             let body = "<tbody>";
@@ -626,40 +624,38 @@
                 let itemMin = Math.min(...pricesForItem);
                 let itemAvg = pricesForItem.reduce((a, b) => a + b, 0) / pricesForItem.length;
                 
-                // Cálculo da porcentagem de economia vs média
-                let diffPct = itemAvg > 0 ? (((itemAvg - itemMin) / itemAvg) * 100).toFixed(0) : 0;
-
                 bestMixTotal += (itemMin * item.quantity);
                 averageTotal += (itemAvg * item.quantity);
 
                 body += `<tr class="border-b border-gray-50">
                     <td class="p-5 text-xs font-bold">${item.name}</td>
-                    <td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>
-                    <td class="p-5 text-center text-xs font-mono font-bold text-gray-400">
-                        R$ ${itemMin.toFixed(2)}
-                        <br><span class="text-[9px] text-emerald-600 font-black">-${diffPct}% vs média</span>
-                    </td>`;
+                    <td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>`;
 
                 comparisonResults.forEach(res => {
                     const pi = res.items.find(pi => pi.productName === item.name);
                     const unitPrice = pi ? pi.price : 0;
                     const totalPrice = unitPrice * item.quantity;
+                    const isBest = unitPrice === itemMin;
+                    const reductionPct = itemAvg > 0 ? (((itemAvg - unitPrice) / itemAvg) * 100).toFixed(0) : 0;
+
                     body += `<td class="p-5 text-center border-l border-gray-50">
-                        <span class="px-2 py-1 rounded-full text-xs font-mono font-black ${unitPrice === itemMin ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">
-                            R$ ${totalPrice.toFixed(2)}
-                        </span>
+                        <div class="flex flex-col items-center">
+                            <span class="px-2 py-1 rounded-full text-xs font-mono font-black ${isBest ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">
+                                R$ ${totalPrice.toFixed(2)}
+                            </span>
+                            <span class="text-[9px] text-gray-400 font-bold mt-1">R$ ${unitPrice.toFixed(2)} un.</span>
+                            ${isBest && reductionPct > 0 ? `<span class="text-[8px] text-emerald-600 font-black">-${reductionPct}% vs média</span>` : ''}
+                        </div>
                     </td>`;
                 });
-
-                body += `<td class="p-5 text-center border-l border-gray-50 text-xs font-mono text-gray-400">R$ ${itemAvg.toFixed(2)}</td>`;
                 body += "</tr>";
             });
 
             const totalEconomy = averageTotal - bestMixTotal;
 
             body += `<tr class="bg-emerald-600 text-white">
-                <td class="p-6 font-black uppercase text-xs" colspan="3">Economia Total (Mix)</td>
-                <td colspan="${comparisonResults.length + 1}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td>
+                <td class="p-6 font-black uppercase text-xs" colspan="2">Economia Total (Mix)</td>
+                <td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td>
             </tr></tbody>`;
             table.innerHTML = header + body;
         }
@@ -678,6 +674,16 @@
 
             const optimizedByStore = {};
             
+            // Pré-calcula médias para usar no PDF
+            const averages = {};
+            shoppingList.forEach(item => {
+                const prices = comparisonResults.map(res => {
+                    const pi = res.items.find(p => p.productName === item.name);
+                    return pi ? pi.price : 0;
+                });
+                averages[item.name] = prices.reduce((a, b) => a + b, 0) / prices.length;
+            });
+
             shoppingList.forEach(item => {
                 const prices = comparisonResults.map(res => ({
                     store: res.storeName,
@@ -694,41 +700,122 @@
                     category: item.category,
                     qty: item.quantity,
                     unitPrice: bestOption.price,
-                    totalPrice: bestOption.price * item.quantity
+                    totalPrice: bestOption.price * item.quantity,
+                    avgUnitPrice: averages[item.name]
                 });
             });
 
             let totalGeral = 0;
+            let totalGeralSaved = 0;
 
             Object.entries(optimizedByStore).forEach(([store, items]) => {
-                if (y > 250) { doc.addPage(); y = 20; }
+                if (y > 230) { doc.addPage(); y = 20; }
                 
+                // Nome do Supermercado (Prefixo removido)
                 doc.setFont("helvetica", "bold");
                 doc.setTextColor(16, 185, 129); // Emerald 600
-                doc.text(`Ir para: ${store}`, 20, y);
-                y += 7;
+                doc.setFontSize(14);
+                doc.text(store, 20, y);
+                y += 10;
                 
+                // Cabeçalho da Tabela
+                doc.setFontSize(9);
+                doc.setTextColor(150, 150, 150);
+                doc.text("CATEGORIA", 20, y);
+                doc.text("PRODUTO", 55, y);
+                doc.text("QTD", 115, y);
+                doc.text("PREÇO", 135, y);
+                doc.text("TOTAL", 175, y);
+                y += 5;
+                doc.setDrawColor(240, 240, 240);
+                doc.line(20, y, 190, y);
+                y += 7;
+
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(0, 0, 0);
                 doc.setFontSize(10);
                 
                 let storeTotal = 0;
+                let storeTotalSaved = 0;
+
                 items.forEach(it => {
-                    doc.text(`${it.qty}x ${it.name} (${it.category})`, 25, y);
-                    doc.text(`R$ ${it.unitPrice.toFixed(2)} un.`, 120, y);
-                    doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 170, y);
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    
+                    // Categoria
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text(it.category.toUpperCase(), 20, y);
+                    
+                    // Produto
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(it.name, 55, y);
+                    
+                    // Quantidade
+                    doc.text(it.qty.toString(), 115, y);
+                    
+                    // Preço Unitário e % de Redução
+                    doc.text(`R$ ${it.unitPrice.toFixed(2)}`, 135, y);
+                    const reductionPct = it.avgUnitPrice > 0 ? (((it.avgUnitPrice - it.unitPrice) / it.avgUnitPrice) * 100).toFixed(0) : 0;
+                    doc.setFontSize(7);
+                    doc.setTextColor(16, 185, 129);
+                    doc.text(`-${reductionPct}% vs média`, 135, y + 4);
+                    
+                    // Valor Total
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 175, y);
+                    
                     storeTotal += it.totalPrice;
-                    y += 6;
+                    // Economia = (Média - Preço) * Qtd
+                    storeTotalSaved += (it.avgUnitPrice - it.unitPrice) * it.qty;
+                    y += 12; // Espaçamento maior para caber o texto de redução
                 });
                 
+                // Rodapé do Supermercado
                 doc.setFont("helvetica", "bold");
-                doc.text(`Total no ${store}: R$ ${storeTotal.toFixed(2)}`, 140, y);
-                y += 12;
+                doc.text(`Total no ${store}: R$ ${storeTotal.toFixed(2)}`, 130, y);
+                y += 6;
+                doc.setTextColor(16, 185, 129);
+                doc.text(`Economia estimada: R$ ${storeTotalSaved.toFixed(2)}`, 130, y);
+                
+                y += 15;
                 totalGeral += storeTotal;
+                totalGeralSaved += storeTotalSaved;
             });
 
+            // Resumo Final
+            if (y > 230) { doc.addPage(); y = 20; }
             doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
             doc.text(`Valor Total Estimado da Compra: R$ ${totalGeral.toFixed(2)}`, 20, y);
+            y += 8;
+            doc.setTextColor(16, 185, 129);
+            doc.text(`Economia total estimada: R$ ${totalGeralSaved.toFixed(2)}`, 20, y);
+            y += 20;
+
+            // TERMO DE USO E PRIVACIDADE
+            if (y > 210) { doc.addPage(); y = 20; }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text("TERMO DE USO E PRIVACIDADE", 20, y);
+            y += 5;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            const termsText = [
+                "Ao utilizar este aplicativo, o usuário declara estar ciente e concordar que:",
+                "• Os preços exibidos são coletados presencialmente pelo administrador do aplicativo, com base em visitas aos supermercados.",
+                "• Os valores têm caráter informativo e podem sofrer alterações a qualquer momento nos estabelecimentos.",
+                "• O aplicativo não realiza vendas, não intermedia compras e não possui vínculo com os supermercados citados.",
+                "• O usuário é responsável por confirmar os preços no local da compra.",
+                "• O aplicativo não se responsabiliza por divergências de preços, indisponibilidade de produtos ou decisões de consumo.",
+                "• Dados pessoais são tratados conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018)."
+            ];
+            termsText.forEach(line => {
+                doc.text(line, 20, y);
+                y += 4;
+            });
 
             doc.save("lista_de_compras_supercompare.pdf");
             showToast("PDF Gerado com sucesso!");
