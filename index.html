@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SuperCompare AI - Economia Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
@@ -112,7 +113,7 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap justify-center gap-4">
-                       <button onclick="window.print()" class="px-8 py-4 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-50">Imprimir Roteiro</button>
+                       <button onclick="generatePDFList()" class="px-8 py-4 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-50">Gerar Lista</button>
                        <button onclick="saveList()" class="px-8 py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700">Salvar Lista</button>
                     </div>
                 </section>
@@ -569,7 +570,6 @@
                             price = found.price;
                         } else {
                             // 2. Se não existir, gera um preço determinístico baseado no nome (para teste)
-                            // Isso garante que o preço do "Arroz" seja sempre o mesmo no "Carrefour" nesta sessão
                             const seed = market.name.length + listEntry.name.length;
                             price = (seed % 20) + 10.50; // Preços entre 10.50 e 30.50
                         }
@@ -590,9 +590,12 @@
             const table = document.getElementById('table-results');
             document.getElementById('results-display').classList.remove('hidden');
             
-            // Adicionada coluna "Qtd" no cabeçalho
-            let header = `<thead class="bg-gray-50"><tr><th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th><th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>`;
-            comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName}</th>`);
+            // Adicionada coluna "V. Unitário" no cabeçalho
+            let header = `<thead class="bg-gray-50"><tr>
+                <th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>
+                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>
+                <th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">V. Unitário</th>`;
+            comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName} (Total)</th>`);
             header += "</tr></thead>";
 
             let body = "<tbody>";
@@ -612,15 +615,20 @@
                 bestMixTotal += (itemMin * item.quantity);
                 averageTotal += (itemAvg * item.quantity);
 
-                body += `<tr class="border-b border-gray-50"><td class="p-5 text-xs font-bold">${item.name}</td>`;
-                
-                // Adicionada coluna "Qtd" no corpo da tabela
-                body += `<td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>`;
+                body += `<tr class="border-b border-gray-50">
+                    <td class="p-5 text-xs font-bold">${item.name}</td>
+                    <td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>
+                    <td class="p-5 text-center text-xs font-mono font-bold text-gray-400">R$ ${itemMin.toFixed(2)}</td>`;
 
                 comparisonResults.forEach(res => {
                     const pi = res.items.find(pi => pi.productName === item.name);
-                    const price = pi ? pi.price : 0;
-                    body += `<td class="p-5 text-center border-l border-gray-50"><span class="px-2 py-1 rounded-full text-xs font-mono font-black ${price === itemMin ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">R$ ${price.toFixed(2)}</span></td>`;
+                    const unitPrice = pi ? pi.price : 0;
+                    const totalPrice = unitPrice * item.quantity;
+                    body += `<td class="p-5 text-center border-l border-gray-50">
+                        <span class="px-2 py-1 rounded-full text-xs font-mono font-black ${unitPrice === itemMin ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">
+                            R$ ${totalPrice.toFixed(2)}
+                        </span>
+                    </td>`;
                 });
                 body += "</tr>";
             });
@@ -628,9 +636,83 @@
             // Cálculo da economia em relação à média de preços
             const totalEconomy = averageTotal - bestMixTotal;
 
-            body += `<tr class="bg-emerald-600 text-white"><td class="p-6 font-black uppercase text-xs" colspan="2">Economia Total (Mix)</td><td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td></tr></tbody>`;
+            body += `<tr class="bg-emerald-600 text-white">
+                <td class="p-6 font-black uppercase text-xs" colspan="3">Economia Total (Mix)</td>
+                <td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td>
+            </tr></tbody>`;
             table.innerHTML = header + body;
         }
+
+        window.generatePDFList = () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 20;
+
+            doc.setFontSize(18);
+            doc.text("Sua Lista de Compras Otimizada", 20, y);
+            y += 10;
+            doc.setFontSize(12);
+            doc.text(`Gerado em: ${new Date().toLocaleString()}`, 20, y);
+            y += 15;
+
+            // Agrupa itens pelo mercado onde estão mais baratos
+            const optimizedByStore = {};
+            
+            shoppingList.forEach(item => {
+                const prices = comparisonResults.map(res => ({
+                    store: res.storeName,
+                    price: res.items.find(pi => pi.productName === item.name)?.price || 0
+                }));
+                
+                // Encontra a melhor opção
+                const bestOption = prices.reduce((min, current) => current.price < min.price ? current : min, prices[0]);
+                
+                if (!optimizedByStore[bestOption.store]) {
+                    optimizedByStore[bestOption.store] = [];
+                }
+                optimizedByStore[bestOption.store].push({
+                    name: item.name,
+                    qty: item.quantity,
+                    unitPrice: bestOption.price,
+                    totalPrice: bestOption.price * item.quantity
+                });
+            });
+
+            let totalGeral = 0;
+
+            Object.entries(optimizedByStore).forEach(([store, items]) => {
+                if (y > 250) { doc.addPage(); y = 20; }
+                
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(16, 185, 129); // Emerald 600
+                doc.text(`Ir para: ${store}`, 20, y);
+                y += 7;
+                
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                
+                let storeTotal = 0;
+                items.forEach(it => {
+                    doc.text(`${it.qty}x ${it.name}`, 25, y);
+                    doc.text(`R$ ${it.unitPrice.toFixed(2)} un.`, 120, y);
+                    doc.text(`R$ ${it.totalPrice.toFixed(2)}`, 170, y);
+                    storeTotal += it.totalPrice;
+                    y += 6;
+                });
+                
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total no ${store}: R$ ${storeTotal.toFixed(2)}`, 140, y);
+                y += 12;
+                totalGeral += storeTotal;
+            });
+
+            doc.setFontSize(14);
+            doc.text(`Valor Total Estimado da Compra: R$ ${totalGeral.toFixed(2)}`, 20, y);
+
+            doc.save("lista_de_compras_supercompare.pdf");
+            showToast("PDF Gerado com sucesso!");
+        };
 
         window.saveList = () => { showToast("Lista Salva!"); renderHistory(); };
         function renderHistory() { /* local history logic */ }
