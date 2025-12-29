@@ -7,6 +7,8 @@
     <title>SuperCompare AI - SQL Local</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Biblioteca para Leitura de Código de Barras -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
@@ -21,6 +23,8 @@
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
+
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; overflow: hidden; border-radius: 1rem; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
@@ -253,18 +257,43 @@
             <!-- GESTÃO DE PRODUTOS -->
             <div id="view-admin-products" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE PRODUTOS</h2></div>
-                <form id="form-product" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                <!-- SCANNER MODAL / SECTION -->
+                <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border space-y-4 text-center">
+                    <h3 class="text-xs font-black uppercase text-emerald-600">Scanner de Código de Barras</h3>
+                    <div id="reader" class="mx-auto"></div>
+                    <button onclick="stopScanner()" class="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase">Fechar Câmera</button>
+                </div>
+
+                <form id="form-product" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <input type="hidden" id="product-id">
-                    <select id="product-category" class="p-3 bg-gray-50 rounded-xl border" required></select>
-                    <input type="text" id="product-name" placeholder="Nome do Produto" class="p-3 bg-gray-50 rounded-xl border" required>
-                    <button type="submit" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Categoria</label>
+                        <select id="product-category" class="w-full p-3 bg-gray-50 rounded-xl border text-sm" required></select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Nome do Produto</label>
+                        <input type="text" id="product-name" placeholder="Ex: Arroz 5kg" class="w-full p-3 bg-gray-50 rounded-xl border text-sm" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Código de Barras</label>
+                        <div class="relative">
+                            <input type="number" id="product-barcode" placeholder="0000000000000" class="w-full p-3 bg-gray-50 rounded-xl border text-sm pr-12">
+                            <button type="button" onclick="startScanner()" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m0 11v1m5-12h1a2 2 0 012 2v1m-17 0V7a2 2 0 012-2h1m12 12v1a2 2 0 01-2 2h-1m-4 0H7a2 2 0 01-2-2v-1m4-13V3m0 0v1m0 11v1m0 0v1" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md hover:bg-emerald-700 transition-all">Salvar Produto</button>
                 </form>
+
                 <div class="bg-white rounded-3xl border overflow-hidden">
                     <table class="w-full text-left">
-                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-500">
                             <tr>
                                 <th class="p-4">Produto</th>
                                 <th class="p-4">Categoria</th>
+                                <th class="p-4">Código EAN</th>
                                 <th class="p-4 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -288,7 +317,7 @@
                 </form>
                 <div class="bg-white rounded-3xl border overflow-hidden">
                     <table class="w-full text-left">
-                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-500">
                             <tr>
                                 <th class="p-4">Valor Numérico</th>
                                 <th class="p-4">Mercado</th>

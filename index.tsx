@@ -55,6 +55,7 @@ const db = new Database();
 // --- APP STATE ---
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
+let html5QrCode: any = null;
 
 // --- HELPERS ---
 const formatPrice = (val: any): string => {
@@ -67,6 +68,47 @@ const formatDate = (iso: string): string => {
     const d = new Date(iso);
     return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+
+// --- SCANNER LOGIC ---
+const startScanner = async () => {
+    const container = document.getElementById('scanner-container');
+    if (container) container.classList.remove('hidden');
+    
+    html5QrCode = new (window as any).Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText: string) => {
+                const barcodeInput = document.getElementById('product-barcode') as HTMLInputElement;
+                if (barcodeInput) {
+                    barcodeInput.value = decodedText;
+                    showToast("Código lido: " + decodedText);
+                    stopScanner();
+                }
+            },
+            (errorMessage: string) => {
+                // Erros silenciosos durante a busca por frames
+            }
+        );
+    } catch (err) {
+        console.error("Erro ao iniciar scanner:", err);
+        showToast("Erro ao abrir câmera");
+    }
+};
+(window as any).startScanner = startScanner;
+
+const stopScanner = async () => {
+    if (html5QrCode) {
+        await html5QrCode.stop();
+        html5QrCode = null;
+    }
+    const container = document.getElementById('scanner-container');
+    if (container) container.classList.add('hidden');
+};
+(window as any).stopScanner = stopScanner;
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -232,6 +274,7 @@ async function renderAdminProducts() {
         <tr class="border-b">
             <td class="p-4 font-bold">${p.name}</td>
             <td class="p-4 text-emerald-600 text-[10px] font-black uppercase">${p.category}</td>
+            <td class="p-4 text-gray-500 text-[10px] font-mono">${p.barcode || '-'}</td>
             <td class="p-4 text-right flex justify-end gap-3">
                 <button onclick="editProduct(${p.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
                 <button onclick="deleteRow('products', ${p.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
@@ -272,7 +315,6 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         e.preventDefault();
         const data: any = {};
         
-        // Determina o ID do campo oculto baseado no nome da tabela/formulario
         let idBase = table === 'cities' ? 'city' : table.slice(0, -1);
         if (id.includes('user')) idBase = 'user-admin';
         
@@ -284,7 +326,6 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             if (el) {
                 let val = el.value;
                 if (fid.includes('price')) val = parseFloat(val) || 0;
-                // Mapeia o nome do campo retirando o prefixo (ex: input-city-name -> name)
                 const prop = fid.split('-').pop()!;
                 data[prop] = val;
             }
@@ -309,7 +350,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
 setupForm('form-city', 'cities', ['input-city-name', 'input-city-state'], renderAdminCities);
 setupForm('form-market', 'markets', ['market-name', 'market-city', 'market-bairro'], renderAdminMarkets);
 setupForm('form-category', 'categories', ['category-name'], renderAdminCategories);
-setupForm('form-product', 'products', ['product-name', 'product-category'], renderAdminProducts);
+setupForm('form-product', 'products', ['product-name', 'product-category', 'product-barcode'], renderAdminProducts);
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
 
@@ -355,6 +396,7 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     (document.getElementById('product-id') as HTMLInputElement).value = item.id;
     (document.getElementById('product-category') as HTMLSelectElement).value = item.category;
     (document.getElementById('product-name') as HTMLInputElement).value = item.name;
+    (document.getElementById('product-barcode') as HTMLInputElement).value = item.barcode || '';
     document.getElementById('form-product')?.scrollIntoView({ behavior: 'smooth' });
     showToast('Editando produto: ' + item.name);
 };

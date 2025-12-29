@@ -2,6 +2,7 @@
   "name": "SuperCompare PRO - Supabase Cloud",
   "description": "App de comparação de preços sincronizado em tempo real utilizando Supabase Cloud como backend relacional.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "camera"
   ]
 }
