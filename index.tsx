@@ -12,7 +12,17 @@ class Database {
     async query(table: string, action: 'SELECT' | 'INSERT' | 'DELETE' | 'UPDATE', params: any = null): Promise<any[]> {
         try {
             if (action === 'SELECT') {
-                const { data, error } = await supabase.from(table).select('*');
+                let query = supabase.from(table).select('*');
+                
+                // Aplica ordenação alfabética por padrão para tabelas de cadastro
+                if (['cities', 'markets', 'categories', 'products', 'users'].includes(table)) {
+                    query = query.order('name', { ascending: true });
+                } else if (table === 'prices') {
+                    // Ordena preços por mercado e produto para melhor visualização
+                    query = query.order('market', { ascending: true }).order('product', { ascending: true });
+                }
+
+                const { data, error } = await query;
                 if (error) throw error;
                 return data || [];
             }
@@ -36,7 +46,6 @@ class Database {
             }
         } catch (err) {
             console.error(`Erro na operação ${action} em ${table}:`, err);
-            // Se as tabelas ainda não existirem no Supabase, avisamos no console
             return [];
         }
         return [];
