@@ -589,23 +589,46 @@
         function renderResultsTable() {
             const table = document.getElementById('table-results');
             document.getElementById('results-display').classList.remove('hidden');
-            let header = `<thead class="bg-gray-50"><tr><th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th>`;
+            
+            // Adicionada coluna "Qtd" no cabeçalho
+            let header = `<thead class="bg-gray-50"><tr><th class="p-5 text-[10px] font-black uppercase text-gray-400">Produto</th><th class="p-5 text-center text-[10px] font-black uppercase text-gray-400">Qtd</th>`;
             comparisonResults.forEach(res => header += `<th class="p-5 text-center text-[10px] font-black uppercase text-gray-800 border-l border-gray-100">${res.storeName}</th>`);
             header += "</tr></thead>";
 
             let body = "<tbody>";
             let bestMixTotal = 0;
+            let averageTotal = 0;
+
             shoppingList.forEach(item => {
-                let itemMin = Math.min(...comparisonResults.map(res => res.items.find(pi => pi.productName === item.name).price));
+                // Coleta todos os preços deste item em todos os mercados comparados
+                const pricesForItem = comparisonResults.map(res => {
+                    const foundItem = res.items.find(pi => pi.productName === item.name);
+                    return foundItem ? foundItem.price : 0;
+                });
+
+                let itemMin = Math.min(...pricesForItem);
+                let itemAvg = pricesForItem.reduce((a, b) => a + b, 0) / pricesForItem.length;
+                
                 bestMixTotal += (itemMin * item.quantity);
+                averageTotal += (itemAvg * item.quantity);
+
                 body += `<tr class="border-b border-gray-50"><td class="p-5 text-xs font-bold">${item.name}</td>`;
+                
+                // Adicionada coluna "Qtd" no corpo da tabela
+                body += `<td class="p-5 text-center text-xs font-bold text-gray-500">x${item.quantity}</td>`;
+
                 comparisonResults.forEach(res => {
-                    const price = res.items.find(pi => pi.productName === item.name).price;
+                    const pi = res.items.find(pi => pi.productName === item.name);
+                    const price = pi ? pi.price : 0;
                     body += `<td class="p-5 text-center border-l border-gray-50"><span class="px-2 py-1 rounded-full text-xs font-mono font-black ${price === itemMin ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-50'}">R$ ${price.toFixed(2)}</span></td>`;
                 });
                 body += "</tr>";
             });
-            body += `<tr class="bg-emerald-600 text-white"><td class="p-6 font-black uppercase text-xs">Total Economia (Mix)</td><td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${bestMixTotal.toFixed(2)}</td></tr></tbody>`;
+
+            // Cálculo da economia em relação à média de preços
+            const totalEconomy = averageTotal - bestMixTotal;
+
+            body += `<tr class="bg-emerald-600 text-white"><td class="p-6 font-black uppercase text-xs" colspan="2">Economia Total (Mix)</td><td colspan="${comparisonResults.length}" class="p-6 text-center text-2xl font-black">R$ ${totalEconomy.toFixed(2)}</td></tr></tbody>`;
             table.innerHTML = header + body;
         }
 
