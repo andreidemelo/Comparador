@@ -179,7 +179,14 @@ async function renderAdminCities() {
     if (!t) return;
     const cities = await db.query('cities', 'SELECT');
     t.innerHTML = cities.map(c => `
-        <tr class="border-b"><td class="p-4 font-bold">${c.name}</td><td class="p-4">${c.state}</td><td class="p-4 text-right"><button onclick="deleteRow('cities', ${c.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
+        <tr class="border-b">
+            <td class="p-4 font-bold">${c.name}</td>
+            <td class="p-4">${c.state}</td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                <button onclick="editCity(${c.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
+                <button onclick="deleteRow('cities', ${c.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+            </td>
+        </tr>
     `).join('');
 }
 
@@ -189,7 +196,15 @@ async function renderAdminMarkets() {
     if (!t) return;
     const markets = await db.query('markets', 'SELECT');
     t.innerHTML = markets.map(m => `
-        <tr class="border-b"><td class="p-4 font-bold">${m.name}</td><td class="p-4">${m.city}</td><td class="p-4 text-gray-400 text-xs">${m.bairro}</td><td class="p-4 text-right"><button onclick="deleteRow('markets', ${m.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
+        <tr class="border-b">
+            <td class="p-4 font-bold">${m.name}</td>
+            <td class="p-4">${m.city}</td>
+            <td class="p-4 text-gray-400 text-xs">${m.bairro}</td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                <button onclick="editMarket(${m.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
+                <button onclick="deleteRow('markets', ${m.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+            </td>
+        </tr>
     `).join('');
 }
 
@@ -198,7 +213,13 @@ async function renderAdminCategories() {
     if (!t) return;
     const categories = await db.query('categories', 'SELECT');
     t.innerHTML = categories.map(c => `
-        <tr class="border-b"><td class="p-4 font-bold">${c.name}</td><td class="p-4 text-right"><button onclick="deleteRow('categories', ${c.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
+        <tr class="border-b">
+            <td class="p-4 font-bold">${c.name}</td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                <button onclick="editCategory(${c.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
+                <button onclick="deleteRow('categories', ${c.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+            </td>
+        </tr>
     `).join('');
 }
 
@@ -208,7 +229,14 @@ async function renderAdminProducts() {
     if (!t) return;
     const products = await db.query('products', 'SELECT');
     t.innerHTML = products.map(p => `
-        <tr class="border-b"><td class="p-4 font-bold">${p.name}</td><td class="p-4 text-emerald-600 text-[10px] font-black uppercase">${p.category}</td><td class="p-4 text-right"><button onclick="deleteRow('products', ${p.id})" class="text-red-500 text-xs font-bold">EXCLUIR</button></td></tr>
+        <tr class="border-b">
+            <td class="p-4 font-bold">${p.name}</td>
+            <td class="p-4 text-emerald-600 text-[10px] font-black uppercase">${p.category}</td>
+            <td class="p-4 text-right flex justify-end gap-3">
+                <button onclick="editProduct(${p.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
+                <button onclick="deleteRow('products', ${p.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+            </td>
+        </tr>
     `).join('');
 }
 
@@ -228,8 +256,8 @@ async function renderAdminPrices() {
                 <td class="p-4">${p.product}</td>
                 <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
                 <td class="p-4 text-right flex justify-end gap-3">
-                    <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase">Alterar</button>
-                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase">Excluir</button>
+                    <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
+                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
                 </td>
             </tr>
         `;
@@ -244,9 +272,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         e.preventDefault();
         const data: any = {};
         
-        // Verifica se há ID para UPDATE (padrão admin-id ou price-id)
-        const idBase = id.split('-')[1]; // Ex: form-user-admin -> user
-        const editIdField = document.getElementById(`${id.includes('user') ? 'user-admin' : idBase}-id`) as HTMLInputElement;
+        // Determina o ID do campo oculto baseado no nome da tabela/formulario
+        let idBase = table === 'cities' ? 'city' : table.slice(0, -1);
+        if (id.includes('user')) idBase = 'user-admin';
+        
+        const editIdField = document.getElementById(`${idBase}-id`) as HTMLInputElement;
         const editId = editIdField ? editIdField.value : null;
 
         fields.forEach(fid => {
@@ -254,13 +284,17 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             if (el) {
                 let val = el.value;
                 if (fid.includes('price')) val = parseFloat(val) || 0;
-                data[fid.split('-').pop()!] = val;
+                // Mapeia o nome do campo retirando o prefixo (ex: input-city-name -> name)
+                const prop = fid.split('-').pop()!;
+                data[prop] = val;
             }
         });
 
+        if (table === 'prices') data.updatedAt = new Date().toLocaleString('pt-BR');
+
         if (editId) {
             await db.query(table, 'UPDATE', { id: editId, data });
-            showToast('Registro atualizado!');
+            showToast('Registro atualizado com sucesso!');
             if (editIdField) editIdField.value = '';
         } else {
             await db.query(table, 'INSERT', data);
@@ -278,6 +312,86 @@ setupForm('form-category', 'categories', ['category-name'], renderAdminCategorie
 setupForm('form-product', 'products', ['product-name', 'product-category'], renderAdminProducts);
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
+
+// --- EDIT FUNCTIONS ---
+
+(window as any).editCity = async (id: any) => {
+    const data = await db.query('cities', 'SELECT');
+    const item = data.find(x => x.id == id);
+    if (!item) return;
+    (document.getElementById('city-id') as HTMLInputElement).value = item.id;
+    (document.getElementById('input-city-name') as HTMLInputElement).value = item.name;
+    (document.getElementById('input-city-state') as HTMLInputElement).value = item.state;
+    document.getElementById('form-city')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando cidade: ' + item.name);
+};
+
+(window as any).editMarket = async (id: any) => {
+    const data = await db.query('markets', 'SELECT');
+    const item = data.find(x => x.id == id);
+    if (!item) return;
+    (document.getElementById('market-id') as HTMLInputElement).value = item.id;
+    (document.getElementById('market-name') as HTMLInputElement).value = item.name;
+    (document.getElementById('market-city') as HTMLSelectElement).value = item.city;
+    (document.getElementById('market-bairro') as HTMLInputElement).value = item.bairro;
+    document.getElementById('form-market')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando mercado: ' + item.name);
+};
+
+(window as any).editCategory = async (id: any) => {
+    const data = await db.query('categories', 'SELECT');
+    const item = data.find(x => x.id == id);
+    if (!item) return;
+    (document.getElementById('category-id') as HTMLInputElement).value = item.id;
+    (document.getElementById('category-name') as HTMLInputElement).value = item.name;
+    document.getElementById('form-category')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando categoria: ' + item.name);
+};
+
+(window as any).editProduct = async (id: any) => {
+    const data = await db.query('products', 'SELECT');
+    const item = data.find(x => x.id == id);
+    if (!item) return;
+    (document.getElementById('product-id') as HTMLInputElement).value = item.id;
+    (document.getElementById('product-category') as HTMLSelectElement).value = item.category;
+    (document.getElementById('product-name') as HTMLInputElement).value = item.name;
+    document.getElementById('form-product')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando produto: ' + item.name);
+};
+
+(window as any).editPrice = async (id: any) => {
+    const prices = await db.query('prices', 'SELECT');
+    const price = prices.find(p => p.id == id);
+    if (!price) return;
+
+    (document.getElementById('price-id') as HTMLInputElement).value = price.id;
+    (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
+    (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
+    
+    await (window as any).onCategoryChangePrice();
+    (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
+    
+    const numericValue = parseFloat(price.price);
+    (document.getElementById('price-price') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
+    
+    document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando preço do produto: ' + price.product);
+};
+
+(window as any).editUser = async (id: any) => {
+    const users = await db.query('users', 'SELECT');
+    const u = users.find(x => x.id == id);
+    if (!u) return;
+
+    (document.getElementById('user-admin-id') as HTMLInputElement).value = u.id;
+    (document.getElementById('user-admin-name') as HTMLInputElement).value = u.name;
+    (document.getElementById('user-admin-email') as HTMLInputElement).value = u.email || '';
+    (document.getElementById('user-admin-city') as HTMLSelectElement).value = u.city || '';
+    (document.getElementById('user-admin-password') as HTMLInputElement).value = u.password;
+
+    document.getElementById('form-user-admin')?.scrollIntoView({ behavior: 'smooth' });
+    showToast('Editando usuário: ' + u.name);
+};
 
 // --- CASCADING SELECTS ---
 (window as any).onCategoryChangePrice = async () => {
@@ -444,40 +558,6 @@ async function populateDropdown(id: string, table: string) {
         await db.query(table, 'DELETE', id);
         showView(`admin-${table}`);
     }
-};
-
-(window as any).editPrice = async (id: any) => {
-    const prices = await db.query('prices', 'SELECT');
-    const price = prices.find(p => p.id == id);
-    if (!price) return;
-
-    (document.getElementById('price-id') as HTMLInputElement).value = price.id;
-    (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
-    (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
-    
-    await (window as any).onCategoryChangePrice();
-    (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
-    
-    const numericValue = parseFloat(price.price);
-    (document.getElementById('price-price') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
-    
-    document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Modo de edição ativado');
-};
-
-(window as any).editUser = async (id: any) => {
-    const users = await db.query('users', 'SELECT');
-    const u = users.find(x => x.id == id);
-    if (!u) return;
-
-    (document.getElementById('user-admin-id') as HTMLInputElement).value = u.id;
-    (document.getElementById('user-admin-name') as HTMLInputElement).value = u.name;
-    (document.getElementById('user-admin-email') as HTMLInputElement).value = u.email || '';
-    (document.getElementById('user-admin-city') as HTMLSelectElement).value = u.city || '';
-    (document.getElementById('user-admin-password') as HTMLInputElement).value = u.password;
-
-    document.getElementById('form-user-admin')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando usuário: ' + u.name);
 };
 
 function showToast(m: string) {

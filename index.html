@@ -185,44 +185,92 @@
             <div id="view-admin-cities" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE CIDADES</h2></div>
                 <form id="form-city" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <input type="hidden" id="city-id">
                     <input type="text" id="input-city-name" placeholder="Cidade" class="p-3 bg-gray-50 rounded-xl border" required>
                     <input type="text" id="input-city-state" placeholder="UF" maxlength="2" class="p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
-                <div class="bg-white rounded-3xl border overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="p-4">Cidade</th><th class="p-4">UF</th><th class="p-4 text-right">Ação</th></tr></thead><tbody id="table-cities-body"></tbody></table></div>
+                <div class="bg-white rounded-3xl border overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="p-4">Cidade</th>
+                                <th class="p-4">UF</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-cities-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- GESTÃO DE MERCADOS -->
             <div id="view-admin-markets" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE MERCADOS</h2></div>
                 <form id="form-market" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <input type="hidden" id="market-id">
                     <input type="text" id="market-name" placeholder="Nome do Mercado" class="p-3 bg-gray-50 rounded-xl border" required>
                     <select id="market-city" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <input type="text" id="market-bairro" placeholder="Bairro" class="p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
-                <div class="bg-white rounded-3xl border overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="p-4">Mercado</th><th class="p-4">Cidade</th><th class="p-4">Bairro</th><th class="p-4 text-right">Ação</th></tr></thead><tbody id="table-markets-body"></tbody></table></div>
+                <div class="bg-white rounded-3xl border overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="p-4">Mercado</th>
+                                <th class="p-4">Cidade</th>
+                                <th class="p-4">Bairro</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-markets-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- GESTÃO DE CATEGORIAS -->
             <div id="view-admin-categories" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE CATEGORIAS</h2></div>
                 <form id="form-category" class="bg-white p-6 rounded-3xl border flex gap-4">
+                    <input type="hidden" id="category-id">
                     <input type="text" id="category-name" placeholder="Nome da Categoria" class="flex-1 p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" class="bg-emerald-600 text-white px-8 rounded-xl font-black">Salvar</button>
                 </form>
-                <div class="bg-white rounded-3xl border overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="p-4">Categoria</th><th class="p-4 text-right">Ação</th></tr></thead><tbody id="table-categories-body"></tbody></table></div>
+                <div class="bg-white rounded-3xl border overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="p-4">Categoria</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-categories-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- GESTÃO DE PRODUTOS -->
             <div id="view-admin-products" class="hidden animate-in space-y-6">
                 <div class="flex items-center justify-between"><button onclick="showView('admin-menu')" class="text-xs font-bold text-gray-400">Voltar</button><h2 class="text-xl font-black">GESTÃO DE PRODUTOS</h2></div>
                 <form id="form-product" class="bg-white p-6 rounded-3xl border grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <input type="hidden" id="product-id">
                     <select id="product-category" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <input type="text" id="product-name" placeholder="Nome do Produto" class="p-3 bg-gray-50 rounded-xl border" required>
                     <button type="submit" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>
-                <div class="bg-white rounded-3xl border overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="p-4">Produto</th><th class="p-4">Categoria</th><th class="p-4 text-right">Ação</th></tr></thead><tbody id="table-products-body"></tbody></table></div>
+                <div class="bg-white rounded-3xl border overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="p-4">Produto</th>
+                                <th class="p-4">Categoria</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-products-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- GESTÃO DE PREÇOS -->
