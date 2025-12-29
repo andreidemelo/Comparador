@@ -197,8 +197,8 @@
                     <select id="price-category" onchange="onCategoryChangePrice()" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-product" class="p-3 bg-gray-50 rounded-xl border" required disabled><option value="">Produto</option></select>
                     
-                    <!-- Campo Numérico puro para consistência total de tipo -->
-                    <input type="number" step="0.01" min="0" id="price-value" placeholder="0.00" class="p-3 bg-gray-50 rounded-xl border" required>
+                    <!-- ID ALTERADO PARA price-price PARA CONSISTÊNCIA DE CHAVE NO BANCO -->
+                    <input type="number" step="0.01" min="0" id="price-price" placeholder="0.00" class="p-3 bg-gray-50 rounded-xl border" required>
                     
                     <button type="submit" id="btn-save-price" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
                 </form>

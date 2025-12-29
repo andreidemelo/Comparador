@@ -263,7 +263,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             if (el) {
                 let val = el.value;
                 // Tratamento rigoroso de salvamento para consistência total de tipo
-                if (fid === 'price-value') {
+                if (fid === 'price-price') {
                     val = formatPrice(val);
                 }
                 data[fid.split('-').pop()!] = val;
@@ -294,7 +294,7 @@ setupForm('form-city', 'cities', ['input-city-name', 'input-city-state'], render
 setupForm('form-market', 'markets', ['market-name', 'market-city', 'market-bairro'], renderAdminMarkets);
 setupForm('form-category', 'categories', ['category-name'], renderAdminCategories);
 setupForm('form-product', 'products', ['product-name', 'product-category'], renderAdminProducts);
-setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-value'], renderAdminPrices);
+setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 
 // --- CASCADING SELECTS ---
 (window as any).onCategoryChangePrice = () => {
@@ -422,7 +422,7 @@ function populateDropdown(id: string, table: string) {
     
     // Garante que o valor no input de edição esteja no formato numérico correto para o browser
     const numericValue = parseFloat(price.price);
-    (document.getElementById('price-value') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
+    (document.getElementById('price-price') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
     
     document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
     showToast('Modo de edição ativado');
