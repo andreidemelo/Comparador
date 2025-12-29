@@ -321,6 +321,15 @@ function loadHome() {
     updateListDisplay();
 }
 
+(window as any).changeQuantity = (delta: number) => {
+    const qIn = document.getElementById('select-quantity') as HTMLInputElement;
+    if (!qIn) return;
+    let val = parseInt(qIn.value) || 1;
+    val += delta;
+    if (val < 1) val = 1;
+    qIn.value = val.toString();
+};
+
 (window as any).addItem = () => {
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;

@@ -96,7 +96,15 @@
                         </div>
                         <div class="md:col-span-1">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block">Qtd</label>
-                            <input type="number" id="select-quantity" min="1" value="1" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                            <div class="flex items-center bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                                <button onclick="changeQuantity(-1)" type="button" class="px-3 py-3 hover:bg-gray-100 text-gray-500 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                                </button>
+                                <input type="number" id="select-quantity" min="1" value="1" class="w-full bg-transparent text-center text-sm font-bold outline-none" readonly>
+                                <button onclick="changeQuantity(1)" type="button" class="px-3 py-3 hover:bg-gray-100 text-gray-500 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="md:col-span-2">
                             <button onclick="addItem()" class="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Adicionar</button>
@@ -203,7 +211,6 @@
                     <select id="price-category" onchange="onCategoryChangePrice()" class="p-3 bg-gray-50 rounded-xl border" required></select>
                     <select id="price-product" class="p-3 bg-gray-50 rounded-xl border" required disabled><option value="">Produto</option></select>
                     
-                    <!-- ID ALTERADO PARA price-price PARA CONSISTÊNCIA DE CHAVE NO BANCO -->
                     <input type="number" step="0.01" min="0" id="price-price" placeholder="0.00" class="p-3 bg-gray-50 rounded-xl border" required>
                     
                     <button type="submit" id="btn-save-price" class="bg-emerald-600 text-white rounded-xl font-black">Salvar</button>
