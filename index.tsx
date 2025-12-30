@@ -1,5 +1,6 @@
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+import { GoogleGenAI } from "@google/genai";
 
 // --- CONFIGURAÇÃO REAL DO SUPABASE ---
 const SUPABASE_URL = 'https://zagebrolhkzdqezmijdi.supabase.co';
@@ -69,6 +70,9 @@ const adminEditingStates: Record<string, number | null> = {
     price: null
 };
 
+let currentScannerTarget: string | null = null;
+let scannerStream: MediaStream | null = null;
+
 // --- HELPERS ---
 const formatPrice = (val: any): string => {
     const num = parseFloat(val);
@@ -132,6 +136,78 @@ const showView = async (vId: string) => {
     }
 };
 (window as any).showView = showView;
+
+// --- SCANNER LOGIC ---
+const openScanner = async (targetId: string) => {
+    currentScannerTarget = targetId;
+    const modal = document.getElementById('scanner-modal');
+    const video = document.getElementById('scanner-video') as HTMLVideoElement;
+    if (!modal || !video) return;
+
+    try {
+        scannerStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+        });
+        video.srcObject = scannerStream;
+        modal.style.display = 'flex';
+    } catch (err) {
+        showToast("Erro ao acessar câmera: " + err);
+    }
+};
+(window as any).openScanner = openScanner;
+
+const closeScanner = () => {
+    const modal = document.getElementById('scanner-modal');
+    if (modal) modal.style.display = 'none';
+    if (scannerStream) {
+        scannerStream.getTracks().forEach(track => track.stop());
+        scannerStream = null;
+    }
+    currentScannerTarget = null;
+};
+(window as any).closeScanner = closeScanner;
+
+const captureFromScanner = async () => {
+    const video = document.getElementById('scanner-video') as HTMLVideoElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0);
+    const base64Data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+    
+    showToast("Reconhecendo código...");
+    closeScanner();
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Data, mimeType: 'image/jpeg' } },
+                    { text: 'Extraia apenas o número do código de barras EAN visível nesta imagem. Retorne apenas os dígitos numéricos, sem espaços ou texto.' }
+                ]
+            }
+        });
+
+        const barcodeResult = response.text?.replace(/\D/g, '');
+        if (barcodeResult && currentScannerTarget) {
+            const input = document.getElementById(currentScannerTarget) as HTMLInputElement;
+            if (input) {
+                input.value = barcodeResult;
+                showToast("Código reconhecido com sucesso!");
+            }
+        } else {
+            showToast("Código de barras não detectado.");
+        }
+    } catch (err) {
+        showToast("Falha no reconhecimento.");
+    }
+};
+(window as any).captureFromScanner = captureFromScanner;
 
 // --- ADMIN DATA LOADING & ACTIONS ---
 async function loadAdminUsers() { 
@@ -212,7 +288,7 @@ async function loadAdminProducts() {
         <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
             <td class="p-6 font-bold text-slate-700">${p.name}</td>
             <td class="p-6 text-slate-500">${p.category}</td>
-            <td class="p-6 text-slate-500 font-mono">${p.barcode || '-'}</td>
+            <td class="p-6 text-slate-500 font-mono text-xs">${p.barcode || '-'}</td>
             <td class="p-6 text-right">
                 <div class="flex justify-end gap-3">
                     <button onclick='editItemAdmin("product", ${JSON.stringify(p)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
@@ -542,7 +618,7 @@ if (authForm) {
         if (!isLogin) {
             const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
             const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
-            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
+            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn, created_at: new Date().toISOString() });
             (window as any).setAuthMode('login');
         } else {
             const users = await db.query('users', 'SELECT');
@@ -570,7 +646,7 @@ document.getElementById('form-user')?.addEventListener('submit', async (e) => {
         await db.query('users', 'UPDATE', { id: adminEditingStates.user, data: { name, email, city, password } });
         showToast('Usuário atualizado');
     } else {
-        await db.query('users', 'INSERT', { name, email, city, password });
+        await db.query('users', 'INSERT', { name, email, city, password, created_at: new Date().toISOString() });
         showToast('Usuário cadastrado');
     }
     
