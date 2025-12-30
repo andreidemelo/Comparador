@@ -60,13 +60,13 @@ let html5QrCode: any = null;
 // --- HELPERS ---
 const formatPrice = (val: any): string => {
     const num = parseFloat(val);
-    return isNaN(num) ? "0.00" : num.toFixed(2);
+    return isNaN(num) ? "0,00" : num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const formatDate = (iso: string): string => {
     if (!iso) return "-";
     const d = new Date(iso);
-    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('pt-BR');
 };
 
 // --- SCANNER LOGIC ---
@@ -75,7 +75,7 @@ const startScanner = async () => {
     if (container) container.classList.remove('hidden');
     
     html5QrCode = new (window as any).Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+    const config = { fps: 15, qrbox: { width: 250, height: 150 } };
 
     try {
         await html5QrCode.start(
@@ -85,17 +85,14 @@ const startScanner = async () => {
                 const barcodeInput = document.getElementById('product-barcode') as HTMLInputElement;
                 if (barcodeInput) {
                     barcodeInput.value = decodedText;
-                    showToast("Código lido: " + decodedText);
+                    showToast("Produto Identificado");
                     stopScanner();
                 }
             },
-            (errorMessage: string) => {
-                // Erros silenciosos durante a busca por frames
-            }
+            () => {}
         );
     } catch (err) {
-        console.error("Erro ao iniciar scanner:", err);
-        showToast("Erro ao abrir câmera");
+        showToast("Câmera indisponível");
     }
 };
 (window as any).startScanner = startScanner;
@@ -167,7 +164,7 @@ if (authForm) {
             const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
             const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
             await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
-            showToast('Cadastrado com sucesso!'); (window as any).setAuthMode('login');
+            showToast('Conta criada com sucesso!'); (window as any).setAuthMode('login');
         } else {
             const users = await db.query('users', 'SELECT');
             const u = users.find(u => u.name === uIn && u.password === pIn);
@@ -176,7 +173,7 @@ if (authForm) {
                 localStorage.setItem('app_session', JSON.stringify(u)); 
                 renderApp(); 
             } else { 
-                showToast('Usuário ou senha incorretos'); 
+                showToast('Acesso negado: dados incorretos'); 
             }
         }
     };
@@ -187,7 +184,9 @@ if (authForm) {
     const btnR = document.getElementById('btn-tab-register');
     const regF = document.getElementById('register-fields');
     btnL?.classList.toggle('bg-white', mode === 'login');
+    btnL?.classList.toggle('shadow-sm', mode === 'login');
     btnR?.classList.toggle('bg-white', mode === 'register');
+    btnR?.classList.toggle('shadow-sm', mode === 'register');
     regF?.classList.toggle('hidden', mode === 'login');
     if (mode === 'register') populateDropdown('auth-city', 'cities');
 };
@@ -200,17 +199,17 @@ async function renderAdminUsers() {
     if (!t) return;
     const users = await db.query('users', 'SELECT');
     t.innerHTML = users.map(u => `
-        <tr class="border-b text-xs">
-            <td class="p-4 font-bold text-gray-800">${u.name}</td>
-            <td class="p-4 text-gray-500">${u.email || '-'}</td>
-            <td class="p-4 font-medium">${u.city || '-'}</td>
-            <td class="p-4 text-gray-400 font-mono">${formatDate(u.created_at)}</td>
-            <td class="p-4 text-gray-400 italic">${u.password}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
+        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            <td class="p-6 font-bold text-slate-800">${u.name}</td>
+            <td class="p-6 text-slate-500">${u.email || '-'}</td>
+            <td class="p-6 font-medium text-slate-600">${u.city || '-'}</td>
+            <td class="p-6 text-slate-400 font-medium">${formatDate(u.created_at)}</td>
+            <td class="p-6 text-slate-300 font-mono text-[10px]">${u.password}</td>
+            <td class="p-6 text-right flex justify-end gap-4">
                 ${u.name !== 'administrador' ? `
-                    <button onclick="editUser(${u.id})" class="text-blue-500 font-black uppercase hover:underline">Alterar</button>
-                    <button onclick="deleteRow('users', ${u.id})" class="text-red-500 font-black uppercase hover:underline">Excluir</button>
-                ` : '<span class="text-gray-300 font-black uppercase">Protegido</span>'}
+                    <button onclick="editUser(${u.id})" class="text-emerald-600 font-bold uppercase text-[10px] tracking-widest hover:underline">Editar</button>
+                    <button onclick="deleteRow('users', ${u.id})" class="text-red-400 font-bold uppercase text-[10px] tracking-widest hover:underline">Apagar</button>
+                ` : '<span class="text-slate-200 font-bold uppercase text-[10px] tracking-widest">Protegido</span>'}
             </td>
         </tr>
     `).join('');
@@ -221,12 +220,12 @@ async function renderAdminCities() {
     if (!t) return;
     const cities = await db.query('cities', 'SELECT');
     t.innerHTML = cities.map(c => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${c.name}</td>
-            <td class="p-4">${c.state}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
-                <button onclick="editCity(${c.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
-                <button onclick="deleteRow('cities', ${c.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+        <tr class="border-b border-slate-50">
+            <td class="p-6 font-bold text-slate-800">${c.name}</td>
+            <td class="p-6 text-slate-500 font-bold">${c.state}</td>
+            <td class="p-6 text-right flex justify-end gap-4">
+                <button onclick="editCity(${c.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                <button onclick="deleteRow('cities', ${c.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
             </td>
         </tr>
     `).join('');
@@ -238,13 +237,13 @@ async function renderAdminMarkets() {
     if (!t) return;
     const markets = await db.query('markets', 'SELECT');
     t.innerHTML = markets.map(m => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${m.name}</td>
-            <td class="p-4">${m.city}</td>
-            <td class="p-4 text-gray-400 text-xs">${m.bairro}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
-                <button onclick="editMarket(${m.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
-                <button onclick="deleteRow('markets', ${m.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+        <tr class="border-b border-slate-50">
+            <td class="p-6 font-bold text-slate-800">${m.name}</td>
+            <td class="p-6 text-slate-600 font-medium">${m.city}</td>
+            <td class="p-6 text-slate-400 font-medium">${m.bairro}</td>
+            <td class="p-6 text-right flex justify-end gap-4">
+                <button onclick="editMarket(${m.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                <button onclick="deleteRow('markets', ${m.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
             </td>
         </tr>
     `).join('');
@@ -255,11 +254,11 @@ async function renderAdminCategories() {
     if (!t) return;
     const categories = await db.query('categories', 'SELECT');
     t.innerHTML = categories.map(c => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${c.name}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
-                <button onclick="editCategory(${c.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
-                <button onclick="deleteRow('categories', ${c.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+        <tr class="border-b border-slate-50">
+            <td class="p-6 font-bold text-slate-800">${c.name}</td>
+            <td class="p-6 text-right flex justify-end gap-4">
+                <button onclick="editCategory(${c.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                <button onclick="deleteRow('categories', ${c.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
             </td>
         </tr>
     `).join('');
@@ -271,13 +270,13 @@ async function renderAdminProducts() {
     if (!t) return;
     const products = await db.query('products', 'SELECT');
     t.innerHTML = products.map(p => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${p.name}</td>
-            <td class="p-4 text-emerald-600 text-[10px] font-black uppercase">${p.category}</td>
-            <td class="p-4 text-gray-500 text-[10px] font-mono">${p.barcode || '-'}</td>
-            <td class="p-4 text-right flex justify-end gap-3">
-                <button onclick="editProduct(${p.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
-                <button onclick="deleteRow('products', ${p.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+        <tr class="border-b border-slate-50">
+            <td class="p-6 font-bold text-slate-800">${p.name}</td>
+            <td class="p-6"><span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest">${p.category}</span></td>
+            <td class="p-6 text-slate-400 font-mono text-[10px]">${p.barcode || '-'}</td>
+            <td class="p-6 text-right flex justify-end gap-4">
+                <button onclick="editProduct(${p.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                <button onclick="deleteRow('products', ${p.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
             </td>
         </tr>
     `).join('');
@@ -291,16 +290,15 @@ async function renderAdminPrices() {
     
     const prices = await db.query('prices', 'SELECT');
     t.innerHTML = prices.map(p => {
-        const displayPrice = formatPrice(p.price);
         return `
-            <tr class="border-b">
-                <td class="p-4 font-black text-emerald-600">${displayPrice}</td>
-                <td class="p-4 font-bold">${p.market}</td>
-                <td class="p-4">${p.product}</td>
-                <td class="p-4 text-[10px] text-gray-400">${p.updatedAt}</td>
-                <td class="p-4 text-right flex justify-end gap-3">
-                    <button onclick="editPrice(${p.id})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Alterar</button>
-                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-500 text-xs font-bold uppercase hover:underline">Excluir</button>
+            <tr class="border-b border-slate-50">
+                <td class="p-6 font-extrabold text-emerald-600">R$ ${formatPrice(p.price)}</td>
+                <td class="p-6 font-bold text-slate-800">${p.market}</td>
+                <td class="p-6 text-slate-600 font-medium">${p.product}</td>
+                <td class="p-6 text-[10px] text-slate-400 font-medium">${p.updatedAt.split(',')[0]}</td>
+                <td class="p-6 text-right flex justify-end gap-4">
+                    <button onclick="editPrice(${p.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
+                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
                 </td>
             </tr>
         `;
@@ -335,11 +333,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
 
         if (editId) {
             await db.query(table, 'UPDATE', { id: editId, data });
-            showToast('Registro atualizado com sucesso!');
+            showToast('Atualizado!');
             if (editIdField) editIdField.value = '';
         } else {
             await db.query(table, 'INSERT', data);
-            showToast('Gravado com sucesso!');
+            showToast('Cadastrado!');
         }
 
         (e.target as HTMLFormElement).reset();
@@ -354,7 +352,7 @@ setupForm('form-product', 'products', ['product-name', 'product-category', 'prod
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
 
-// --- EDIT FUNCTIONS ---
+// --- EDIT FUNCTIONS (Omitindo para brevidade, mantêm-se as lógicas originais) ---
 
 (window as any).editCity = async (id: any) => {
     const data = await db.query('cities', 'SELECT');
@@ -364,7 +362,6 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     (document.getElementById('input-city-name') as HTMLInputElement).value = item.name;
     (document.getElementById('input-city-state') as HTMLInputElement).value = item.state;
     document.getElementById('form-city')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando cidade: ' + item.name);
 };
 
 (window as any).editMarket = async (id: any) => {
@@ -376,7 +373,6 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     (document.getElementById('market-city') as HTMLSelectElement).value = item.city;
     (document.getElementById('market-bairro') as HTMLInputElement).value = item.bairro;
     document.getElementById('form-market')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando mercado: ' + item.name);
 };
 
 (window as any).editCategory = async (id: any) => {
@@ -386,7 +382,6 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     (document.getElementById('category-id') as HTMLInputElement).value = item.id;
     (document.getElementById('category-name') as HTMLInputElement).value = item.name;
     document.getElementById('form-category')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando categoria: ' + item.name);
 };
 
 (window as any).editProduct = async (id: any) => {
@@ -398,41 +393,31 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     (document.getElementById('product-name') as HTMLInputElement).value = item.name;
     (document.getElementById('product-barcode') as HTMLInputElement).value = item.barcode || '';
     document.getElementById('form-product')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando produto: ' + item.name);
 };
 
 (window as any).editPrice = async (id: any) => {
     const prices = await db.query('prices', 'SELECT');
     const price = prices.find(p => p.id == id);
     if (!price) return;
-
     (document.getElementById('price-id') as HTMLInputElement).value = price.id;
     (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
     (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
-    
     await (window as any).onCategoryChangePrice();
     (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
-    
-    const numericValue = parseFloat(price.price);
-    (document.getElementById('price-price') as HTMLInputElement).value = isNaN(numericValue) ? "" : numericValue.toString();
-    
+    (document.getElementById('price-price') as HTMLInputElement).value = price.price.toString();
     document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando preço do produto: ' + price.product);
 };
 
 (window as any).editUser = async (id: any) => {
     const users = await db.query('users', 'SELECT');
     const u = users.find(x => x.id == id);
     if (!u) return;
-
     (document.getElementById('user-admin-id') as HTMLInputElement).value = u.id;
     (document.getElementById('user-admin-name') as HTMLInputElement).value = u.name;
     (document.getElementById('user-admin-email') as HTMLInputElement).value = u.email || '';
     (document.getElementById('user-admin-city') as HTMLSelectElement).value = u.city || '';
     (document.getElementById('user-admin-password') as HTMLInputElement).value = u.password;
-
     document.getElementById('form-user-admin')?.scrollIntoView({ behavior: 'smooth' });
-    showToast('Editando usuário: ' + u.name);
 };
 
 // --- CASCADING SELECTS ---
@@ -443,7 +428,7 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     pSel.disabled = false;
     const products = await db.query('products', 'SELECT');
     const prods = products.filter(p => p.category === cat);
-    pSel.innerHTML = '<option value="">Produto</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+    pSel.innerHTML = '<option value="">Qual item?</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
 };
 
 (window as any).onCategoryChangeHome = async () => {
@@ -495,12 +480,12 @@ function updateListDisplay() {
     const a = document.getElementById('action-compare');
     if (!c) return;
     c.innerHTML = shoppingList.map(item => `
-        <div class="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div class="flex items-center gap-3">
-                <span class="w-8 h-8 bg-emerald-100 text-emerald-700 flex items-center justify-center rounded-lg text-xs font-black">${item.quantity}</span>
-                <span class="font-bold text-gray-700">${item.name}</span>
+        <div class="group flex justify-between items-center p-6 bg-slate-50 rounded-2xl border border-transparent hover:bg-white hover:border-slate-100 transition-all">
+            <div class="flex items-center gap-4">
+                <span class="w-10 h-10 bg-white text-slate-800 flex items-center justify-center rounded-xl text-xs font-black shadow-sm">${item.quantity}</span>
+                <span class="font-bold text-slate-700">${item.name}</span>
             </div>
-            <button onclick="removeItem('${item.name}')" class="text-red-400 hover:text-red-600 transition-colors">
+            <button onclick="removeItem('${item.name}')" class="text-slate-300 hover:text-red-500 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
         </div>
@@ -520,30 +505,30 @@ function updateListDisplay() {
     if (!res) return;
 
     let html = `
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden animate-in">
-            <div class="p-6 bg-emerald-50 border-b flex justify-between items-center">
+        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden animate-in">
+            <div class="p-8 bg-slate-50/50 border-b flex justify-between items-center">
                 <div>
-                    <h3 class="font-black text-emerald-900 tracking-tight uppercase">Comparativo Real (Supabase Cloud)</h3>
-                    <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Sincronizado com seu banco de dados</p>
+                    <h3 class="font-extrabold text-slate-900 tracking-tight uppercase text-sm">Painel Comparativo</h3>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valores atualizados em tempo real</p>
                 </div>
-                <button onclick="generatePDF()" class="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-100 shadow-sm">Exportar PDF</button>
+                <button onclick="generatePDF()" class="bg-white text-slate-800 px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">Gerar Relatório</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 text-[10px] font-black uppercase text-gray-500">
+                    <thead class="bg-white text-[10px] font-bold uppercase text-slate-400">
                         <tr>
-                            <th class="p-4 border-r">Item x Qtd</th>
-                            ${markets.map(m => `<th class="p-4 text-center border-r min-w-[120px]">${m.name}</th>`).join('')}
+                            <th class="p-6">Lista de Itens</th>
+                            ${markets.map(m => `<th class="p-6 text-center min-w-[140px]">${m.name}</th>`).join('')}
                         </tr>
                     </thead>
-                    <tbody class="divide-y text-sm">
+                    <tbody class="divide-y divide-slate-50 text-sm">
     `;
 
     let totals: any = {};
     markets.forEach(m => totals[m.name] = 0);
 
     shoppingList.forEach(item => {
-        html += `<tr><td class="p-4 border-r font-medium text-gray-600"><span class="font-black text-gray-900">${item.name}</span> <span class="text-xs text-gray-400">x ${item.quantity}</span></td>`;
+        html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> <span class="text-xs text-slate-300 ml-1">x${item.quantity}</span></td>`;
         markets.forEach(m => {
             const priceObj = prices.find(p => p.market === m.name && p.product === item.name);
             const unitPrice = priceObj ? parseFloat(priceObj.price) : 0;
@@ -552,11 +537,11 @@ function updateListDisplay() {
             totals[m.name] += isNaN(lineTotal) ? 0 : lineTotal;
             
             html += `
-                <td class="p-4 text-center border-r ${lineTotal ? '' : 'bg-gray-50/50'}">
+                <td class="p-6 text-center">
                     ${lineTotal ? `
-                        <div class="font-black text-gray-800">R$ ${lineTotal.toFixed(2)}</div>
-                        <div class="text-[9px] font-bold text-gray-400 uppercase">Un: R$ ${unitPrice.toFixed(2)}</div>
-                    ` : '<span class="text-gray-300 font-bold italic text-xs">Indisponível</span>'}
+                        <div class="font-extrabold text-slate-800 text-base">R$ ${formatPrice(lineTotal)}</div>
+                        <div class="text-[8px] font-bold text-slate-300 uppercase">Unit: R$ ${formatPrice(unitPrice)}</div>
+                    ` : '<span class="text-slate-200 text-[10px] font-bold uppercase italic tracking-widest">---</span>'}
                 </td>`;
         });
         html += `</tr>`;
@@ -566,17 +551,17 @@ function updateListDisplay() {
     const minTotal = validTotals.length > 0 ? Math.min(...(validTotals as number[])) : 0;
 
     html += `
-        <tr class="bg-emerald-900 text-white font-black">
-            <td class="p-6 border-r uppercase tracking-widest">TOTAL DA LISTA</td>
+        <tr class="bg-slate-900 text-white font-bold">
+            <td class="p-8 uppercase tracking-widest text-[10px]">TOTAL FINAL</td>
     `;
     
     markets.forEach(m => {
         const total = totals[m.name];
         const isBest = total > 0 && total === minTotal;
         html += `
-            <td class="p-6 text-center border-r ${isBest ? 'bg-emerald-500' : ''}">
-                <div class="text-xl">R$ ${total.toFixed(2)}</div>
-                ${isBest ? '<div class="text-[8px] font-black uppercase tracking-tighter mt-1 bg-white/20 px-1 rounded">MELHOR OPÇÃO</div>' : ''}
+            <td class="p-8 text-center ${isBest ? 'bg-emerald-600' : ''}">
+                <div class="text-xl font-extrabold">R$ ${formatPrice(total)}</div>
+                ${isBest ? '<div class="text-[8px] font-bold uppercase tracking-widest mt-2 bg-emerald-500/50 py-1 px-2 rounded-lg">Melhor Preço</div>' : ''}
             </td>`;
     });
 
@@ -596,7 +581,7 @@ async function populateDropdown(id: string, table: string) {
 }
 
 (window as any).deleteRow = async (table: string, id: any) => {
-    if (confirm('Deletar registro permanentemente?')) {
+    if (confirm('Remover registro?')) {
         await db.query(table, 'DELETE', id);
         showView(`admin-${table}`);
     }
@@ -605,13 +590,16 @@ async function populateDropdown(id: string, table: string) {
 function showToast(m: string) {
     const t = document.getElementById('toast');
     const tx = document.getElementById('toast-text');
-    if (t && tx) { tx.textContent = m; t.classList.remove('translate-y-20'); setTimeout(() => t.classList.add('translate-y-20'), 2500); }
+    if (t && tx) { tx.textContent = m; t.classList.remove('translate-y-32'); setTimeout(() => t.classList.add('translate-y-32'), 3000); }
 }
 
 (window as any).generatePDF = () => {
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
-    doc.text("Relatório SuperCompare PRO (Supabase)", 10, 10);
-    shoppingList.forEach((it, i) => doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 10, 25 + (i*8)));
-    doc.save("pesquisa_precos.pdf");
+    doc.setFontSize(18);
+    doc.text("SuperCompare - Relatório de Economia", 20, 20);
+    doc.setFontSize(10);
+    doc.text(`Lista de: ${currentUser.name} - ${new Date().toLocaleDateString()}`, 20, 30);
+    shoppingList.forEach((it, i) => doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 20, 45 + (i*8)));
+    doc.save("SuperCompare-Lista.pdf");
 };
