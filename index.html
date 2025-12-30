@@ -114,58 +114,20 @@
             padding: 1.5rem;
         }
 
-        /* Camera Modal Specifics */
-        #camera-modal {
-            background: black;
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        #camera-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .camera-overlay {
-            position: absolute;
-            inset: 0;
-            border: 2px solid rgba(16, 185, 129, 0.5);
-            margin: 20%;
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
-            pointer-events: none;
+        /* Admin Layout Helpers */
+        .admin-section { @apply bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 mb-8; }
+        .admin-header { @apply flex justify-between items-center mb-8 border-b border-slate-50 pb-6; }
+        .admin-form-grid { @apply grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end; }
+        .admin-table { @apply w-full text-left border-collapse; }
+        .admin-table th { @apply p-4 text-[10px] font-bold uppercase text-slate-400 border-b border-slate-50; }
+        .admin-table td { @apply p-4 text-sm text-slate-600 border-b border-slate-50; }
+        
+        .btn-cancel-edit {
+            @apply hidden ml-2 p-4 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-300 transition-all;
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-  }
-}
-</script>
 </head>
 <body class="text-slate-900 min-h-screen">
-
-    <!-- CAMERA MODAL -->
-    <div id="camera-modal">
-        <video id="camera-video" autoplay playsinline></video>
-        <div class="camera-overlay"></div>
-        <div class="absolute top-8 left-0 right-0 px-8 flex justify-between items-center text-white">
-            <button onclick="closeCamera()" class="p-3 bg-white/10 backdrop-blur rounded-full">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-            <span class="text-[10px] font-bold uppercase tracking-widest">Aponte para o Código de Barras</span>
-            <div class="w-10"></div>
-        </div>
-        <div class="absolute bottom-12 left-0 right-0 flex justify-center">
-            <button id="capture-btn" onclick="captureSnapshot()" class="w-20 h-20 bg-white border-8 border-emerald-500 rounded-full active:scale-90 transition-all"></button>
-        </div>
-    </div>
 
     <!-- MODAL PARA NOME DA LISTA -->
     <div id="modal-list-name" class="modal-overlay">
@@ -242,26 +204,8 @@
         </header>
 
         <main class="max-w-7xl mx-auto p-4 md:p-8">
+            <!-- VIEW HOME -->
             <div id="view-home" class="animate-in space-y-8">
-                
-                <!-- NOVA SEÇÃO: PESQUISA RÁPIDA -->
-                <section class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-[2.5rem] p-8 text-white shadow-xl shadow-emerald-200">
-                    <div class="max-w-xl">
-                        <h2 class="text-2xl font-black mb-2 tracking-tight">Compare o Preço de um Produto</h2>
-                        <p class="text-emerald-100 text-sm mb-8">Digite o código de barras ou use a câmera para encontrar o menor preço agora.</p>
-                        <div class="flex gap-4">
-                            <div class="flex-1 relative">
-                                <input type="text" id="quick-barcode-input" placeholder="Digite o código de barras..." class="w-full p-5 bg-white/10 border border-white/20 rounded-2xl text-white placeholder:text-emerald-200 outline-none focus:bg-white focus:text-slate-900 focus:placeholder:text-slate-400 transition-all font-bold">
-                                <button onclick="openCamera()" class="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-emerald-500 hover:bg-emerald-400 rounded-xl text-white transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                </button>
-                            </div>
-                            <button onclick="quickSearch()" class="px-8 py-5 bg-white text-emerald-700 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all active:scale-95">Pesquisar</button>
-                        </div>
-                    </div>
-                </section>
-                <div id="quick-search-results" class="hidden animate-in"></div>
-
                 <section class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8">
                     <h2 class="text-xs font-bold uppercase text-slate-400 tracking-widest mb-6">Minhas Listas Salvas</h2>
                     <div id="saved-lists-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -292,13 +236,194 @@
                     </div>
                     <div id="shopping-list-container" class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     
-                    <!-- BOTÕES DE AÇÃO DINÂMICOS -->
                     <div id="action-compare" class="hidden mt-12 flex flex-col sm:flex-row justify-center items-center gap-4 border-t border-slate-50 pt-10">
                         <button onclick="handleSaveAction()" class="px-10 py-5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-[1.5rem] font-bold uppercase tracking-widest hover:bg-emerald-100 transition-all">Salvar Lista</button>
                         <button onclick="runComparison()" class="px-16 py-5 bg-slate-900 text-white rounded-[1.5rem] font-bold uppercase tracking-widest shadow-xl shadow-slate-200">Comparar Menor Preço</button>
                     </div>
                 </section>
                 <section id="comparison-results" class="hidden animate-in space-y-6"></section>
+            </div>
+
+            <!-- VIEW ADMIN MENU -->
+            <div id="view-admin-menu" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Administração Central</h2>
+                    <button onclick="showView('home')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Home</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <button onclick="showView('admin-users')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Usuários</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerenciar Contas</p>
+                    </button>
+                    <button onclick="showView('admin-cities')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Cidades</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Localidades</p>
+                    </button>
+                    <button onclick="showView('admin-markets')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-7h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Mercados</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Pontos de Venda</p>
+                    </button>
+                    <button onclick="showView('admin-categories')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Categorias</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Organização</p>
+                    </button>
+                    <button onclick="showView('admin-products')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Produtos</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Catálogo</p>
+                    </button>
+                    <button onclick="showView('admin-prices')" class="list-card p-10 rounded-[2.5rem] text-left hover:scale-[1.02] transition-all">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                        <h3 class="font-bold text-slate-900">Preços</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cotações Mensais</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN USERS -->
+            <div id="view-admin-users" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Gestão de Usuários</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-user" class="admin-form-grid mb-10">
+                        <div class="md:col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Nome</label><input type="text" id="user-name" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div class="md:col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Email</label><input type="email" id="user-email" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></div>
+                        <div class="md:col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Cidade</label><select id="user-city" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></select></div>
+                        <div class="md:col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Senha</label><input type="text" id="user-password" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-user" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('user')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Usuário</th><th>Email</th><th>Cidade</th><th>Cadastro</th><th>Senha</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-users-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN CITIES -->
+            <div id="view-admin-cities" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Cidades</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-city" class="admin-form-grid mb-10">
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Nome da Cidade</label>
+                            <input type="text" id="input-city-name" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500" required>
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">UF</label>
+                            <input type="text" id="input-city-state" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500" maxlength="2" required>
+                        </div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-city" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('city')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Cidade</th><th>Estado</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-cities-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN MARKETS -->
+            <div id="view-admin-markets" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Mercados</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-market" class="admin-form-grid mb-10">
+                        <div class="md:col-span-2"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Nome do Mercado</label><input type="text" id="market-name" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Cidade</label><select id="market-city" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></select></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Bairro</label><input type="text" id="market-bairro" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-market" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('market')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Nome</th><th>Cidade</th><th>Bairro</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-markets-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN CATEGORIES -->
+            <div id="view-admin-categories" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Categorias</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-category" class="admin-form-grid mb-10">
+                        <div class="md:col-span-3"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Nome da Categoria</label><input type="text" id="category-name" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-category" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('category')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Categoria</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-categories-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN PRODUCTS -->
+            <div id="view-admin-products" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Produtos</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-product" class="admin-form-grid mb-10">
+                        <div class="md:col-span-2"><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Nome do Produto</label><input type="text" id="product-name" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Categoria</label><select id="product-category" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></select></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Cód. Barras</label><input type="text" id="product-barcode" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-product" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('product')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Produto</th><th>Categoria</th><th>Código</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-products-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW ADMIN PRICES -->
+            <div id="view-admin-prices" class="hidden animate-in">
+                <div class="admin-header">
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase">Preços</h2>
+                    <button onclick="showView('admin-menu')" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-widest">Voltar Menu</button>
+                </div>
+                <div class="admin-section">
+                    <form id="form-price" class="admin-form-grid mb-10">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Mercado</label><select id="price-market" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></select></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Produto</label><select id="price-product" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none"></select></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase mb-2 block">Preço (R$)</label><input type="number" step="0.01" id="price-price" class="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none" required></div>
+                        <div class="flex">
+                            <button type="submit" id="btn-save-price" class="flex-1 p-4 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Salvar</button>
+                            <button type="button" onclick="resetAdminForm('price')" class="btn-cancel-edit">Cancelar</button>
+                        </div>
+                    </form>
+                    <table class="admin-table">
+                        <thead><tr><th>Preço</th><th>Mercado</th><th>Produto</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="table-prices-body"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>

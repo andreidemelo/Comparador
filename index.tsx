@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-import { GoogleGenAI } from "@google/genai";
 
 // --- CONFIGURAÇÃO REAL DO SUPABASE ---
 const SUPABASE_URL = 'https://zagebrolhkzdqezmijdi.supabase.co';
@@ -60,8 +59,15 @@ const db = new Database();
 // --- APP STATE ---
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
-let openedListId: number | null = null;
-let cameraStream: MediaStream | null = null;
+let openedListId: number | null = null; 
+const adminEditingStates: Record<string, number | null> = {
+    user: null,
+    city: null,
+    market: null,
+    category: null,
+    product: null,
+    price: null
+};
 
 // --- HELPERS ---
 const formatPrice = (val: any): string => {
@@ -117,170 +123,190 @@ const showView = async (vId: string) => {
     if (t) {
         t.classList.remove('hidden');
         if (vId === 'home') loadHome();
+        if (vId === 'admin-users') { loadAdminUsers(); populateDropdown('user-city', 'cities'); }
+        if (vId === 'admin-cities') loadAdminCities();
+        if (vId === 'admin-markets') { loadAdminMarkets(); populateDropdown('market-city', 'cities'); }
+        if (vId === 'admin-categories') loadAdminCategories();
+        if (vId === 'admin-products') { loadAdminProducts(); populateDropdown('product-category', 'categories'); }
+        if (vId === 'admin-prices') { loadAdminPrices(); populateDropdown('price-market', 'markets'); populateDropdown('price-product', 'products'); }
     }
 };
 (window as any).showView = showView;
 
-// --- CAMERA & BARCODE LOGIC WITH GEMINI ---
-const openCamera = async () => {
-    const modal = document.getElementById('camera-modal');
-    const video = document.getElementById('camera-video') as HTMLVideoElement;
-    if (!modal || !video) return;
-
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
-        });
-        video.srcObject = cameraStream;
-        modal.style.display = 'flex';
-    } catch (err) {
-        showToast("Erro ao acessar câmera: " + err);
-    }
-};
-(window as any).openCamera = openCamera;
-
-const closeCamera = () => {
-    const modal = document.getElementById('camera-modal');
-    if (modal) modal.style.display = 'none';
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-    }
-};
-(window as any).closeCamera = closeCamera;
-
-const captureSnapshot = async () => {
-    const video = document.getElementById('camera-video') as HTMLVideoElement;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
-    
-    const base64Data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-    closeCamera();
-    showToast("Analisando código de barras...");
-    
-    // USANDO GEMINI PARA LER O CÓDIGO DE BARRAS OU IDENTIFICAR O PRODUTO
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: {
-                parts: [
-                    { inlineData: { data: base64Data, mimeType: 'image/jpeg' } },
-                    { text: 'Extraia apenas os números do código de barras (EAN) visível nesta imagem. Se não houver código de barras, identifique o nome do produto. Retorne apenas o número ou o nome, sem explicações.' }
-                ]
-            }
-        });
-        
-        const result = response.text?.trim() || "";
-        if (result) {
-            const input = document.getElementById('quick-barcode-input') as HTMLInputElement;
-            if (input) {
-                input.value = result;
-                quickSearch();
-            }
-        }
-    } catch (err) {
-        showToast("Falha ao identificar produto.");
-    }
-};
-(window as any).captureSnapshot = captureSnapshot;
-
-const quickSearch = async () => {
-    const input = document.getElementById('quick-barcode-input') as HTMLInputElement;
-    const val = input?.value.trim();
-    if (!val) return;
-
-    const resultsDiv = document.getElementById('quick-search-results');
-    if (!resultsDiv) return;
-
-    showToast("Buscando preços...");
-    
-    const products = await db.query('products', 'SELECT');
-    // Busca flexível: por barcode ou nome
-    const prod = products.find(p => p.barcode === val || p.name.toLowerCase().includes(val.toLowerCase()));
-
-    if (!prod) {
-        resultsDiv.innerHTML = `
-            <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl text-center">
-                <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Produto "${val}" não encontrado no banco de dados.</p>
-            </div>`;
-        resultsDiv.classList.remove('hidden');
-        return;
-    }
-
-    const markets = await db.query('markets', 'SELECT');
-    const prices = await db.query('prices', 'SELECT');
-    const prodPrices = prices.filter(p => p.product === prod.name);
-
-    if (prodPrices.length === 0) {
-        resultsDiv.innerHTML = `
-            <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl text-center">
-                <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Sem preços cadastrados para "${prod.name}".</p>
-            </div>`;
-        resultsDiv.classList.remove('hidden');
-        return;
-    }
-
-    // Acha o melhor preço
-    const sortedPrices = prodPrices.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-    const best = sortedPrices[0];
-
-    resultsDiv.innerHTML = `
-        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-            <div class="p-8 bg-slate-50 border-b flex justify-between items-center">
-                <div>
-                    <h3 class="font-extrabold text-slate-900 uppercase text-xs tracking-widest">Resultado da Pesquisa</h3>
-                    <p class="text-lg font-black text-emerald-600 mt-1">${prod.name}</p>
+// --- ADMIN DATA LOADING & ACTIONS ---
+async function loadAdminUsers() { 
+    const data = await db.query('users', 'SELECT');
+    const tbody = document.getElementById('table-users-body');
+    if (tbody) tbody.innerHTML = data.map(u => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${u.name}</td>
+            <td class="p-6 text-slate-500">${u.email || '-'}</td>
+            <td class="p-6 text-slate-500">${u.city || '-'}</td>
+            <td class="p-6 text-slate-500 text-[10px] whitespace-nowrap">${u.created_at ? new Date(u.created_at).toLocaleString('pt-BR') : '-'}</td>
+            <td class="p-6 text-slate-400 font-mono text-xs">${u.password}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("user", ${JSON.stringify(u)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('users', ${u.id}, loadAdminUsers)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
                 </div>
-                <button onclick="document.getElementById('quick-search-results').classList.add('hidden')" class="text-slate-300 hover:text-slate-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div class="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${sortedPrices.map(p => `
-                    <div class="p-6 rounded-2xl border ${p.id === best.id ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100'} transition-all">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">${p.market}</span>
-                            ${p.id === best.id ? '<span class="bg-emerald-500 text-white text-[8px] font-bold px-2 py-1 rounded-lg uppercase tracking-widest">Melhor Preço</span>' : ''}
-                        </div>
-                        <div class="text-2xl font-black text-slate-900">R$ ${formatPrice(p.price)}</div>
-                        <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase">Atualizado em: ${formatDate(p.updated_at)}</p>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="p-6 bg-slate-900 text-center">
-                <button onclick="addItemToCurrentList('${prod.name}')" class="text-white text-[10px] font-bold uppercase tracking-widest hover:text-emerald-400 transition-all">Adicionar à minha lista de compras</button>
-            </div>
-        </div>`;
-    
-    resultsDiv.classList.remove('hidden');
-    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-};
-(window as any).quickSearch = quickSearch;
+            </td>
+        </tr>
+    `).join('');
+}
 
-(window as any).addItemToCurrentList = (name: string) => {
-    shoppingList.push({ name, quantity: 1 });
-    updateListDisplay();
-    showToast(`"${name}" adicionado à lista!`);
-    document.getElementById('quick-search-results')?.classList.add('hidden');
+async function loadAdminCities() { 
+    const data = await db.query('cities', 'SELECT');
+    const tbody = document.getElementById('table-cities-body');
+    if (tbody) tbody.innerHTML = data.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${c.name}</td>
+            <td class="p-6 text-slate-500 uppercase font-bold">${c.state}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("city", ${JSON.stringify(c)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('cities', ${c.id}, loadAdminCities)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadAdminMarkets() { 
+    const data = await db.query('markets', 'SELECT');
+    const tbody = document.getElementById('table-markets-body');
+    if (tbody) tbody.innerHTML = data.map(m => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${m.name}</td>
+            <td class="p-6 text-slate-500">${m.city}</td>
+            <td class="p-6 text-slate-500">${m.bairro || '-'}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("market", ${JSON.stringify(m)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('markets', ${m.id}, loadAdminMarkets)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadAdminCategories() { 
+    const data = await db.query('categories', 'SELECT');
+    const tbody = document.getElementById('table-categories-body');
+    if (tbody) tbody.innerHTML = data.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${c.name}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("category", ${JSON.stringify(c)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('categories', ${c.id}, loadAdminCategories)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadAdminProducts() { 
+    const data = await db.query('products', 'SELECT');
+    const tbody = document.getElementById('table-products-body');
+    if (tbody) tbody.innerHTML = data.map(p => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${p.name}</td>
+            <td class="p-6 text-slate-500">${p.category}</td>
+            <td class="p-6 text-slate-500 font-mono">${p.barcode || '-'}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("product", ${JSON.stringify(p)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('products', ${p.id}, loadAdminProducts)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadAdminPrices() { 
+    const data = await db.query('prices', 'SELECT');
+    const tbody = document.getElementById('table-prices-body');
+    if (tbody) tbody.innerHTML = data.map(p => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-black text-emerald-600">R$ ${formatPrice(p.price)}</td>
+            <td class="p-6 text-slate-700 font-bold">${p.market}</td>
+            <td class="p-6 text-slate-500">${p.product}</td>
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick='editItemAdmin("price", ${JSON.stringify(p)})' class="text-emerald-500 hover:text-emerald-700 font-bold uppercase text-[9px] tracking-widest">Alterar</button>
+                    <button onclick="deleteItem('prices', ${p.id}, loadAdminPrices)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// --- LOGICA DE EDIÇÃO ADMIN ---
+(window as any).editItemAdmin = (type: string, data: any) => {
+    adminEditingStates[type] = data.id;
+    const btnSave = document.getElementById(`btn-save-${type}`);
+    const btnCancel = btnSave?.nextElementSibling as HTMLElement;
+    
+    if (btnSave) btnSave.textContent = "Atualizar";
+    if (btnCancel) btnCancel.style.display = "block";
+
+    if (type === 'user') {
+        (document.getElementById('user-name') as HTMLInputElement).value = data.name;
+        (document.getElementById('user-email') as HTMLInputElement).value = data.email || "";
+        (document.getElementById('user-city') as HTMLSelectElement).value = data.city || "";
+        (document.getElementById('user-password') as HTMLInputElement).value = data.password;
+    } else if (type === 'city') {
+        (document.getElementById('input-city-name') as HTMLInputElement).value = data.name;
+        (document.getElementById('input-city-state') as HTMLInputElement).value = data.state;
+    } else if (type === 'market') {
+        (document.getElementById('market-name') as HTMLInputElement).value = data.name;
+        (document.getElementById('market-city') as HTMLSelectElement).value = data.city;
+        (document.getElementById('market-bairro') as HTMLInputElement).value = data.bairro || "";
+    } else if (type === 'category') {
+        (document.getElementById('category-name') as HTMLInputElement).value = data.name;
+    } else if (type === 'product') {
+        (document.getElementById('product-name') as HTMLInputElement).value = data.name;
+        (document.getElementById('product-category') as HTMLSelectElement).value = data.category;
+        (document.getElementById('product-barcode') as HTMLInputElement).value = data.barcode || "";
+    } else if (type === 'price') {
+        (document.getElementById('price-market') as HTMLSelectElement).value = data.market;
+        (document.getElementById('price-product') as HTMLSelectElement).value = data.product;
+        (document.getElementById('price-price') as HTMLInputElement).value = data.price;
+    }
+
+    document.getElementById(`form-${type}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+(window as any).resetAdminForm = (type: string) => {
+    adminEditingStates[type] = null;
+    const form = document.getElementById(`form-${type}`) as HTMLFormElement;
+    form.reset();
+    
+    const btnSave = document.getElementById(`btn-save-${type}`);
+    const btnCancel = btnSave?.nextElementSibling as HTMLElement;
+    
+    if (btnSave) btnSave.textContent = "Salvar";
+    if (btnCancel) btnCancel.style.display = "none";
+};
+
+(window as any).deleteItem = async (table: string, id: number, callback: Function) => {
+    if (confirm('Tem certeza que deseja excluir?')) {
+        await db.query(table, 'DELETE', id);
+        callback();
+        showToast('Item excluído com sucesso');
+    }
 };
 
 // --- SAVED LISTS LOGIC ---
 async function renderSavedLists() {
     const container = document.getElementById('saved-lists-container');
     if (!container) return;
-    
     const lists = await db.query('saved_lists', 'SELECT');
     const userLists = lists.filter(l => l.user_id === currentUser.id);
-
     if (userLists.length === 0) {
         container.innerHTML = `<p class="text-[10px] font-bold text-slate-300 uppercase italic col-span-full">Nenhuma lista salva ainda...</p>`;
         return;
     }
-
     container.innerHTML = userLists.map(list => `
         <div class="list-card p-6 rounded-[1.5rem] flex flex-col justify-between h-full animate-in">
             <div>
@@ -299,10 +325,8 @@ async function renderSavedLists() {
     const lists = await db.query('saved_lists', 'SELECT');
     const list = lists.find(l => l.id === id);
     if (!list) return;
-
     shoppingList = [...list.items];
-    openedListId = id; // Marca como lista aberta
-    
+    openedListId = id; 
     updateListDisplay();
     document.getElementById('comparison-results')?.classList.add('hidden');
     showToast(`Lista "${list.name}" carregada para edição!`);
@@ -318,19 +342,12 @@ async function renderSavedLists() {
     }
 };
 
-// --- LOGICA PARA SALVAR OU ATUALIZAR ---
+// --- LOGICA PARA SALVAR OU ATUALIZAR LISTA USUARIO ---
 const openListNameModal = () => {
-    if (shoppingList.length === 0) {
-        showToast("Adicione itens à sua lista primeiro");
-        return;
-    }
+    if (shoppingList.length === 0) { showToast("Adicione itens à sua lista primeiro"); return; }
     const modal = document.getElementById('modal-list-name');
     const input = document.getElementById('input-new-list-name') as HTMLInputElement;
-    if (modal && input) {
-        modal.style.display = 'flex';
-        input.value = "";
-        input.focus();
-    }
+    if (modal && input) { modal.style.display = 'flex'; input.value = ""; input.focus(); }
 };
 (window as any).openListNameModal = openListNameModal;
 
@@ -342,68 +359,36 @@ const closeListNameModal = () => {
 
 const confirmUpdateList = async () => {
     if (!openedListId) return;
-
     const lists = await db.query('saved_lists', 'SELECT');
     const original = lists.find(l => l.id === openedListId);
     if (!original) return;
-
-    const updateData = {
-        items: shoppingList,
-        created_at: new Date().toISOString()
-    };
-
+    const updateData = { items: shoppingList, created_at: new Date().toISOString() };
     const res = await db.query('saved_lists', 'UPDATE', { id: openedListId, data: updateData });
-    
     if (res && res.length > 0) {
         showToast(`Lista "${original.name}" atualizada com sucesso!`);
-        shoppingList = [];
-        openedListId = null;
-        updateListDisplay();
+        shoppingList = []; openedListId = null; updateListDisplay();
         document.getElementById('comparison-results')?.classList.add('hidden');
         renderSavedLists();
-    } else {
-        showToast("Erro ao atualizar lista.");
-    }
+    } else { showToast("Erro ao atualizar lista."); }
 };
 (window as any).confirmUpdateList = confirmUpdateList;
 
 (window as any).handleSaveAction = () => {
-    if (openedListId) {
-        confirmUpdateList();
-    } else {
-        openListNameModal();
-    }
+    if (openedListId) { confirmUpdateList(); } else { openListNameModal(); }
 };
 
 const confirmSaveList = async () => {
     const input = document.getElementById('input-new-list-name') as HTMLInputElement;
     const name = input?.value.trim();
-
-    if (!name) {
-        showToast("Por favor, digite um nome para a lista");
-        return;
-    }
-
-    const newList = {
-        user_id: currentUser.id,
-        name: name,
-        items: shoppingList,
-        created_at: new Date().toISOString()
-    };
-
+    if (!name) { showToast("Por favor, digite um nome para a lista"); return; }
+    const newList = { user_id: currentUser.id, name: name, items: shoppingList, created_at: new Date().toISOString() };
     const res = await db.query('saved_lists', 'INSERT', newList);
-    
     if (res && res.length > 0) {
         showToast("Nova lista salva com sucesso!");
-        shoppingList = [];
-        openedListId = null;
-        updateListDisplay();
+        shoppingList = []; openedListId = null; updateListDisplay();
         document.getElementById('comparison-results')?.classList.add('hidden');
-        closeListNameModal();
-        renderSavedLists();
-    } else {
-        showToast("Erro ao conectar com o banco de dados.");
-    }
+        closeListNameModal(); renderSavedLists();
+    } else { showToast("Erro ao conectar com o banco de dados."); }
 };
 (window as any).confirmSaveList = confirmSaveList;
 
@@ -434,6 +419,7 @@ async function loadHome() {
 };
 
 (window as any).addItem = () => {
+    const catSel = document.getElementById('select-category') as HTMLSelectElement;
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;
     if (pSel.disabled || !pSel.value) { showToast("Selecione um produto"); return; }
@@ -441,14 +427,26 @@ async function loadHome() {
     const quantity = parseInt(qIn.value) || 1;
     const existing = shoppingList.find(i => i.name === prodName);
     if (existing) { existing.quantity += quantity; } else { shoppingList.push({ name: prodName, quantity }); }
-    updateListDisplay();
-    showToast("Item adicionado");
+    catSel.value = ""; pSel.value = ""; pSel.disabled = true; pSel.innerHTML = '<option value="">...</option>'; qIn.value = "1";
+    updateListDisplay(); showToast("Item adicionado");
 };
 
 (window as any).editItem = async (name: string) => {
     const item = shoppingList.find(i => i.name === name);
     if (!item) return;
     shoppingList = shoppingList.filter(i => i.name !== name);
+    const products = await db.query('products', 'SELECT');
+    const prod = products.find(p => p.name === name);
+    if (prod) {
+        const catSel = document.getElementById('select-category') as HTMLSelectElement;
+        const qIn = document.getElementById('select-quantity') as HTMLInputElement;
+        catSel.value = prod.category;
+        await (window as any).onCategoryChangeHome();
+        const pSel = document.getElementById('select-product') as HTMLSelectElement;
+        pSel.value = name; qIn.value = item.quantity.toString();
+        showToast(`Ajustando: ${name}`);
+        document.getElementById('select-category')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     updateListDisplay();
 };
 
@@ -457,13 +455,21 @@ function updateListDisplay() {
     const a = document.getElementById('action-compare');
     if (!c) return;
     c.innerHTML = shoppingList.map(item => `
-        <div class="group flex justify-between items-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm">
+        <div class="group flex justify-between items-center p-5 bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 transition-all animate-in shadow-sm">
             <div class="flex items-center gap-3">
                 <div class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-black ring-1 ring-emerald-100">x${item.quantity}</div>
                 <span class="font-bold text-slate-700 text-sm">${item.name}</span>
             </div>
-            <button onclick="editItem('${item.name}')" class="p-2 text-slate-300 hover:text-red-500 rounded-xl transition-all"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-        </div>`).join('');
+            <div class="flex items-center gap-1">
+                <button onclick="editItem('${item.name}')" class="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Alterar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button onclick="removeItem('${item.name}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Excluir">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
     a?.classList.toggle('hidden', shoppingList.length === 0);
     const titleEl = document.getElementById('section-list-title');
     if (titleEl) titleEl.textContent = openedListId ? "Atualize sua Lista de Compras" : "Monte sua Lista de Compras";
@@ -474,32 +480,30 @@ function updateListDisplay() {
     }
 }
 
+(window as any).removeItem = (name: string) => { shoppingList = shoppingList.filter(i => i.name !== name); updateListDisplay(); };
+
+// --- COMPARISON LOGIC ---
 (window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
     const markets = await db.query('markets', 'SELECT');
     const prices = await db.query('prices', 'SELECT');
     if (!res) return;
-
-    let html = `
-        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-            <div class="p-8 bg-slate-50 border-b flex justify-between items-center">
-                <h3 class="font-extrabold text-slate-900 uppercase text-sm">Painel Comparativo</h3>
+    let html = `<div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden animate-in">
+            <div class="p-8 bg-slate-50/50 border-b flex justify-between items-center flex-wrap gap-4">
+                <div><h3 class="font-extrabold text-slate-900 tracking-tight uppercase text-sm">Painel Comparativo</h3></div>
                 <div class="flex gap-3">
-                    <button onclick="handleSaveAction()" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest">${openedListId ? 'Atualizar Lista' : 'Salvar Lista'}</button>
-                    <button onclick="window.print()" class="bg-white text-slate-800 px-6 py-3 rounded-2xl text-[10px] font-bold uppercase border border-slate-100">Imprimir</button>
+                    <button onclick="handleSaveAction()" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50">${openedListId ? 'Atualizar Lista' : 'Salvar Lista'}</button>
+                    <button onclick="window.print()" class="bg-white text-slate-800 px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">Imprimir</button>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-white text-[10px] font-bold uppercase text-slate-400">
-                        <tr><th class="p-6">Item</th>${markets.map(m => `<th class="p-6 text-center">${m.name}</th>`).join('')}</tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50 text-sm">`;
-
-    let totals: any = {};
-    markets.forEach(m => totals[m.name] = 0);
+            <div class="overflow-x-auto"><table class="w-full text-left">
+                <thead class="bg-white text-[10px] font-bold uppercase text-slate-400">
+                    <tr><th class="p-6">Lista de Itens</th>${markets.map(m => `<th class="p-6 text-center min-w-[140px]">${m.name}</th>`).join('')}</tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 text-sm">`;
+    let totals: any = {}; markets.forEach(m => totals[m.name] = 0);
     shoppingList.forEach(item => {
-        html += `<tr><td class="p-6 font-medium text-slate-600">${item.name} x${item.quantity}</td>`;
+        html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> <span class="text-xs text-slate-300 ml-1">x${item.quantity}</span></td>`;
         markets.forEach(m => {
             const priceObj = prices.find(p => p.market === m.name && p.product === item.name);
             const lineTotal = priceObj ? parseFloat(priceObj.price) * item.quantity : 0;
@@ -508,22 +512,19 @@ function updateListDisplay() {
         });
         html += `</tr>`;
     });
-
     const validTotals = Object.values(totals).filter((v: any) => v > 0);
     const minTotal = validTotals.length > 0 ? Math.min(...(validTotals as number[])) : 0;
-
-    html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8">TOTAL</td>`;
+    html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8 uppercase tracking-widest text-[10px]">TOTAL FINAL</td>`;
     markets.forEach(m => {
         const total = totals[m.name];
-        html += `<td class="p-8 text-center ${total > 0 && total === minTotal ? 'bg-emerald-600' : ''}">R$ ${formatPrice(total)}</td>`;
+        const isBest = total > 0 && total === minTotal;
+        html += `<td class="p-8 text-center ${isBest ? 'bg-emerald-600' : ''}">R$ ${formatPrice(total)}</td>`;
     });
     html += `</tr></tbody></table></div></div>`;
-    res.innerHTML = html;
-    res.classList.remove('hidden');
-    res.scrollIntoView({ behavior: 'smooth' });
+    res.innerHTML = html; res.classList.remove('hidden'); res.scrollIntoView({ behavior: 'smooth' });
 };
 
-// --- AUTH & ADMIN (MANTIDOS) ---
+// --- AUTH & ADMIN FORM HANDLERS ---
 (window as any).logout = () => { localStorage.removeItem('app_session'); location.reload(); };
 (window as any).setAuthMode = async (mode: string) => {
     document.getElementById('btn-tab-login')?.classList.toggle('bg-white', mode === 'login');
@@ -556,4 +557,110 @@ async function populateDropdown(id: string, table: string) {
     const data = await db.query(table, 'SELECT');
     el.innerHTML = '<option value="">Selecionar...</option>' + data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
-async function loadAdminUsers() { /* ... admin logic ... */ }
+
+// FORM LISTENERS PARA ADMIN (REFORMULADOS PARA UPDATE)
+document.getElementById('form-user')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('user-name') as HTMLInputElement).value;
+    const email = (document.getElementById('user-email') as HTMLInputElement).value;
+    const city = (document.getElementById('user-city') as HTMLSelectElement).value;
+    const password = (document.getElementById('user-password') as HTMLInputElement).value;
+    
+    if (adminEditingStates.user) {
+        await db.query('users', 'UPDATE', { id: adminEditingStates.user, data: { name, email, city, password } });
+        showToast('Usuário atualizado');
+    } else {
+        await db.query('users', 'INSERT', { name, email, city, password });
+        showToast('Usuário cadastrado');
+    }
+    
+    (window as any).resetAdminForm('user');
+    loadAdminUsers();
+});
+
+document.getElementById('form-city')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('input-city-name') as HTMLInputElement).value;
+    const state = (document.getElementById('input-city-state') as HTMLInputElement).value;
+    
+    if (adminEditingStates.city) {
+        await db.query('cities', 'UPDATE', { id: adminEditingStates.city, data: { name, state } });
+        showToast('Cidade atualizada');
+    } else {
+        await db.query('cities', 'INSERT', { name, state });
+        showToast('Cidade cadastrada');
+    }
+    
+    (window as any).resetAdminForm('city');
+    loadAdminCities();
+});
+
+document.getElementById('form-market')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('market-name') as HTMLInputElement).value;
+    const city = (document.getElementById('market-city') as HTMLSelectElement).value;
+    const bairro = (document.getElementById('market-bairro') as HTMLInputElement).value;
+    
+    if (adminEditingStates.market) {
+        await db.query('markets', 'UPDATE', { id: adminEditingStates.market, data: { name, city, bairro } });
+        showToast('Mercado atualizado');
+    } else {
+        await db.query('markets', 'INSERT', { name, city, bairro });
+        showToast('Mercado cadastrado');
+    }
+    
+    (window as any).resetAdminForm('market');
+    loadAdminMarkets();
+});
+
+document.getElementById('form-category')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('category-name') as HTMLInputElement).value;
+    
+    if (adminEditingStates.category) {
+        await db.query('categories', 'UPDATE', { id: adminEditingStates.category, data: { name } });
+        showToast('Categoria atualizada');
+    } else {
+        await db.query('categories', 'INSERT', { name });
+        showToast('Categoria cadastrada');
+    }
+    
+    (window as any).resetAdminForm('category');
+    loadAdminCategories();
+});
+
+document.getElementById('form-product')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('product-name') as HTMLInputElement).value;
+    const category = (document.getElementById('product-category') as HTMLSelectElement).value;
+    const barcode = (document.getElementById('product-barcode') as HTMLInputElement).value;
+    
+    if (adminEditingStates.product) {
+        await db.query('products', 'UPDATE', { id: adminEditingStates.product, data: { name, category, barcode } });
+        showToast('Produto atualizado');
+    } else {
+        await db.query('products', 'INSERT', { name, category, barcode });
+        showToast('Produto cadastrado');
+    }
+    
+    (window as any).resetAdminForm('product');
+    loadAdminProducts();
+});
+
+document.getElementById('form-price')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const market = (document.getElementById('price-market') as HTMLSelectElement).value;
+    const product = (document.getElementById('price-product') as HTMLSelectElement).value;
+    const price = (document.getElementById('price-price') as HTMLInputElement).value;
+    
+    if (adminEditingStates.price) {
+        await db.query('prices', 'UPDATE', { id: adminEditingStates.price, data: { market, product, price, updated_at: new Date().toISOString() } });
+        showToast('Preço atualizado');
+    } else {
+        await db.query('prices', 'INSERT', { market, product, price, updated_at: new Date().toISOString() });
+        showToast('Preço cadastrado');
+    }
+    
+    (window as any).resetAdminForm('price');
+    loadAdminPrices();
+});
