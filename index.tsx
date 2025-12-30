@@ -18,6 +18,8 @@ class Database {
                     query = query.order('name', { ascending: true });
                 } else if (table === 'prices') {
                     query = query.order('market', { ascending: true }).order('product', { ascending: true });
+                } else if (table === 'saved_lists') {
+                    query = query.order('created_at', { ascending: false });
                 }
 
                 const { data, error } = await query;
@@ -42,8 +44,10 @@ class Database {
                 if (error) throw error;
                 return data || [];
             }
-        } catch (err) {
-            console.error(`Erro na operação ${action} em ${table}:`, err);
+        } catch (err: any) {
+            const errorMsg = err.message || JSON.stringify(err);
+            console.error(`Erro na operação ${action} em ${table}:`, errorMsg);
+            showToast(`Erro DB: ${errorMsg}`);
             return [];
         }
         return [];
@@ -55,7 +59,7 @@ const db = new Database();
 // --- APP STATE ---
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
-let html5QrCode: any = null;
+let openedListId: number | null = null; // Rastreia qual lista está aberta para edição
 
 // --- HELPERS ---
 const formatPrice = (val: any): string => {
@@ -69,43 +73,15 @@ const formatDate = (iso: string): string => {
     return d.toLocaleDateString('pt-BR');
 };
 
-// --- SCANNER LOGIC ---
-const startScanner = async () => {
-    const container = document.getElementById('scanner-container');
-    if (container) container.classList.remove('hidden');
-    
-    html5QrCode = new (window as any).Html5Qrcode("reader");
-    const config = { fps: 15, qrbox: { width: 250, height: 150 } };
-
-    try {
-        await html5QrCode.start(
-            { facingMode: "environment" }, 
-            config, 
-            (decodedText: string) => {
-                const barcodeInput = document.getElementById('product-barcode') as HTMLInputElement;
-                if (barcodeInput) {
-                    barcodeInput.value = decodedText;
-                    showToast("Produto Identificado");
-                    stopScanner();
-                }
-            },
-            () => {}
-        );
-    } catch (err) {
-        showToast("Câmera indisponível");
+function showToast(m: string) {
+    const t = document.getElementById('toast');
+    const tx = document.getElementById('toast-text');
+    if (t && tx) { 
+        tx.textContent = m; 
+        t.classList.remove('translate-y-32'); 
+        setTimeout(() => t.classList.add('translate-y-32'), 3500); 
     }
-};
-(window as any).startScanner = startScanner;
-
-const stopScanner = async () => {
-    if (html5QrCode) {
-        await html5QrCode.stop();
-        html5QrCode = null;
-    }
-    const container = document.getElementById('scanner-container');
-    if (container) container.classList.add('hidden');
-};
-(window as any).stopScanner = stopScanner;
+}
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -120,23 +96,6 @@ function checkSession() {
     }
 }
 
-// --- NAVIGATION ---
-const showView = async (vId: string) => {
-    document.querySelectorAll('#main-app main > div').forEach(d => d.classList.add('hidden'));
-    const t = document.getElementById(`view-${vId}`);
-    if (t) {
-        t.classList.remove('hidden');
-        if (vId === 'home') loadHome();
-        if (vId === 'admin-users') renderAdminUsers();
-        if (vId === 'admin-cities') renderAdminCities();
-        if (vId === 'admin-markets') renderAdminMarkets();
-        if (vId === 'admin-categories') renderAdminCategories();
-        if (vId === 'admin-products') renderAdminProducts();
-        if (vId === 'admin-prices') renderAdminPrices();
-    }
-};
-(window as any).showView = showView;
-
 async function renderApp() {
     document.getElementById('auth-section')?.classList.add('hidden');
     document.getElementById('main-app')?.classList.remove('hidden');
@@ -149,303 +108,186 @@ async function renderApp() {
     showView('home');
 }
 
-(window as any).logout = () => { localStorage.removeItem('app_session'); location.reload(); };
-
-// --- AUTH ---
-const authForm = document.getElementById('form-auth');
-if (authForm) {
-    authForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const uIn = (document.getElementById('auth-username') as HTMLInputElement).value;
-        const pIn = (document.getElementById('auth-password') as HTMLInputElement).value;
-        const mode = (document.getElementById('btn-tab-login')?.classList.contains('bg-white')) ? 'login' : 'register';
-
-        if (mode === 'register') {
-            const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
-            const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
-            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
-            showToast('Conta criada com sucesso!'); (window as any).setAuthMode('login');
-        } else {
-            const users = await db.query('users', 'SELECT');
-            const u = users.find(u => u.name === uIn && u.password === pIn);
-            if (u) { 
-                currentUser = u; 
-                localStorage.setItem('app_session', JSON.stringify(u)); 
-                renderApp(); 
-            } else { 
-                showToast('Acesso negado: dados incorretos'); 
-            }
-        }
-    };
-}
-
-(window as any).setAuthMode = async (mode: string) => {
-    const btnL = document.getElementById('btn-tab-login');
-    const btnR = document.getElementById('btn-tab-register');
-    const regF = document.getElementById('register-fields');
-    btnL?.classList.toggle('bg-white', mode === 'login');
-    btnL?.classList.toggle('shadow-sm', mode === 'login');
-    btnR?.classList.toggle('bg-white', mode === 'register');
-    btnR?.classList.toggle('shadow-sm', mode === 'register');
-    regF?.classList.toggle('hidden', mode === 'login');
-    if (mode === 'register') populateDropdown('auth-city', 'cities');
+// --- NAVIGATION ---
+const showView = async (vId: string) => {
+    document.querySelectorAll('#main-app main > div').forEach(d => d.classList.add('hidden'));
+    const t = document.getElementById(`view-${vId}`);
+    if (t) {
+        t.classList.remove('hidden');
+        if (vId === 'home') loadHome();
+        if (vId === 'admin-users') loadAdminUsers();
+        if (vId === 'admin-cities') loadAdminCities();
+        if (vId === 'admin-markets') loadAdminMarkets();
+        if (vId === 'admin-categories') loadAdminCategories();
+        if (vId === 'admin-products') loadAdminProducts();
+        if (vId === 'admin-prices') loadAdminPrices();
+    }
 };
+(window as any).showView = showView;
 
-// --- RENDERERS ---
-
-async function renderAdminUsers() {
-    populateDropdown('user-admin-city', 'cities');
-    const t = document.getElementById('table-users-body');
-    if (!t) return;
-    const users = await db.query('users', 'SELECT');
-    t.innerHTML = users.map(u => `
-        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-            <td class="p-6 font-bold text-slate-800">${u.name}</td>
-            <td class="p-6 text-slate-500">${u.email || '-'}</td>
-            <td class="p-6 font-medium text-slate-600">${u.city || '-'}</td>
-            <td class="p-6 text-slate-400 font-medium">${formatDate(u.created_at)}</td>
-            <td class="p-6 text-slate-300 font-mono text-[10px]">${u.password}</td>
-            <td class="p-6 text-right flex justify-end gap-4">
-                ${u.name !== 'administrador' ? `
-                    <button onclick="editUser(${u.id})" class="text-emerald-600 font-bold uppercase text-[10px] tracking-widest hover:underline">Editar</button>
-                    <button onclick="deleteRow('users', ${u.id})" class="text-red-400 font-bold uppercase text-[10px] tracking-widest hover:underline">Apagar</button>
-                ` : '<span class="text-slate-200 font-bold uppercase text-[10px] tracking-widest">Protegido</span>'}
-            </td>
-        </tr>
-    `).join('');
-}
-
-async function renderAdminCities() {
-    const t = document.getElementById('table-cities-body');
-    if (!t) return;
-    const cities = await db.query('cities', 'SELECT');
-    t.innerHTML = cities.map(c => `
-        <tr class="border-b border-slate-50">
-            <td class="p-6 font-bold text-slate-800">${c.name}</td>
-            <td class="p-6 text-slate-500 font-bold">${c.state}</td>
-            <td class="p-6 text-right flex justify-end gap-4">
-                <button onclick="editCity(${c.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
-                <button onclick="deleteRow('cities', ${c.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-async function renderAdminMarkets() {
-    populateDropdown('market-city', 'cities');
-    const t = document.getElementById('table-markets-body');
-    if (!t) return;
-    const markets = await db.query('markets', 'SELECT');
-    t.innerHTML = markets.map(m => `
-        <tr class="border-b border-slate-50">
-            <td class="p-6 font-bold text-slate-800">${m.name}</td>
-            <td class="p-6 text-slate-600 font-medium">${m.city}</td>
-            <td class="p-6 text-slate-400 font-medium">${m.bairro}</td>
-            <td class="p-6 text-right flex justify-end gap-4">
-                <button onclick="editMarket(${m.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
-                <button onclick="deleteRow('markets', ${m.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-async function renderAdminCategories() {
-    const t = document.getElementById('table-categories-body');
-    if (!t) return;
-    const categories = await db.query('categories', 'SELECT');
-    t.innerHTML = categories.map(c => `
-        <tr class="border-b border-slate-50">
-            <td class="p-6 font-bold text-slate-800">${c.name}</td>
-            <td class="p-6 text-right flex justify-end gap-4">
-                <button onclick="editCategory(${c.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
-                <button onclick="deleteRow('categories', ${c.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-async function renderAdminProducts() {
-    populateDropdown('product-category', 'categories');
-    const t = document.getElementById('table-products-body');
-    if (!t) return;
-    const products = await db.query('products', 'SELECT');
-    t.innerHTML = products.map(p => `
-        <tr class="border-b border-slate-50">
-            <td class="p-6 font-bold text-slate-800">${p.name}</td>
-            <td class="p-6"><span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest">${p.category}</span></td>
-            <td class="p-6 text-slate-400 font-mono text-[10px]">${p.barcode || '-'}</td>
-            <td class="p-6 text-right flex justify-end gap-4">
-                <button onclick="editProduct(${p.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
-                <button onclick="deleteRow('products', ${p.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-async function renderAdminPrices() {
-    populateDropdown('price-market', 'markets');
-    populateDropdown('price-category', 'categories');
-    const t = document.getElementById('table-prices-body');
-    if (!t) return;
+// --- SAVED LISTS LOGIC ---
+async function renderSavedLists() {
+    const container = document.getElementById('saved-lists-container');
+    if (!container) return;
     
-    const prices = await db.query('prices', 'SELECT');
-    t.innerHTML = prices.map(p => {
-        return `
-            <tr class="border-b border-slate-50">
-                <td class="p-6 font-extrabold text-emerald-600">R$ ${formatPrice(p.price)}</td>
-                <td class="p-6 font-bold text-slate-800">${p.market}</td>
-                <td class="p-6 text-slate-600 font-medium">${p.product}</td>
-                <td class="p-6 text-[10px] text-slate-400 font-medium">${p.updatedAt.split(',')[0]}</td>
-                <td class="p-6 text-right flex justify-end gap-4">
-                    <button onclick="editPrice(${p.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
-                    <button onclick="deleteRow('prices', ${p.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    const lists = await db.query('saved_lists', 'SELECT');
+    const userLists = lists.filter(l => l.user_id === currentUser.id);
+
+    if (userLists.length === 0) {
+        container.innerHTML = `<p class="text-[10px] font-bold text-slate-300 uppercase italic col-span-full">Nenhuma lista salva ainda...</p>`;
+        return;
+    }
+
+    container.innerHTML = userLists.map(list => `
+        <div class="list-card p-6 rounded-[1.5rem] flex flex-col justify-between h-full animate-in">
+            <div>
+                <h3 class="font-bold text-slate-800 text-sm mb-1">${list.name}</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${formatDate(list.created_at)} • ${list.items.length} itens</p>
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button onclick="loadSavedList(${list.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest hover:underline">Abrir Lista</button>
+                <button onclick="deleteSavedList(${list.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest hover:underline">Excluir</button>
+            </div>
+        </div>
+    `).join('');
 }
 
-// --- FORM HANDLERS ---
-const setupForm = (id: string, table: string, fields: string[], callback?: Function) => {
-    const f = document.getElementById(id);
-    if (!f) return;
-    f.onsubmit = async (e) => {
-        e.preventDefault();
-        const data: any = {};
-        
-        let idBase = table === 'cities' ? 'city' : table.slice(0, -1);
-        if (id.includes('user')) idBase = 'user-admin';
-        
-        const editIdField = document.getElementById(`${idBase}-id`) as HTMLInputElement;
-        const editId = editIdField ? editIdField.value : null;
+(window as any).loadSavedList = async (id: number) => {
+    const lists = await db.query('saved_lists', 'SELECT');
+    const list = lists.find(l => l.id === id);
+    if (!list) return;
 
-        fields.forEach(fid => {
-            const el = document.getElementById(fid) as any;
-            if (el) {
-                let val = el.value;
-                if (fid.includes('price')) val = parseFloat(val) || 0;
-                const prop = fid.split('-').pop()!;
-                data[prop] = val;
-            }
-        });
+    shoppingList = [...list.items];
+    openedListId = id; // Marca como lista aberta
+    
+    updateListDisplay();
+    document.getElementById('comparison-results')?.classList.add('hidden');
+    showToast(`Lista "${list.name}" carregada para edição!`);
+    document.getElementById('shopping-list-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 
-        if (table === 'prices') data.updatedAt = new Date().toLocaleString('pt-BR');
+(window as any).deleteSavedList = async (id: number) => {
+    if (confirm('Deseja excluir esta lista permanentemente?')) {
+        await db.query('saved_lists', 'DELETE', id);
+        if (openedListId === id) openedListId = null;
+        renderSavedLists();
+        showToast("Lista removida");
+    }
+};
 
-        if (editId) {
-            await db.query(table, 'UPDATE', { id: editId, data });
-            showToast('Atualizado!');
-            if (editIdField) editIdField.value = '';
-        } else {
-            await db.query(table, 'INSERT', data);
-            showToast('Cadastrado!');
-        }
+// --- LOGICA PARA SALVAR OU ATUALIZAR ---
+const openListNameModal = () => {
+    if (shoppingList.length === 0) {
+        showToast("Adicione itens à sua lista primeiro");
+        return;
+    }
+    const modal = document.getElementById('modal-list-name');
+    const input = document.getElementById('input-new-list-name') as HTMLInputElement;
+    if (modal && input) {
+        modal.style.display = 'flex';
+        input.value = "";
+        input.focus();
+    }
+};
+(window as any).openListNameModal = openListNameModal;
 
-        (e.target as HTMLFormElement).reset();
-        if (callback) callback();
+const closeListNameModal = () => {
+    const modal = document.getElementById('modal-list-name');
+    if (modal) modal.style.display = 'none';
+};
+(window as any).closeListNameModal = closeListNameModal;
+
+const confirmUpdateList = async () => {
+    if (!openedListId) return;
+
+    const lists = await db.query('saved_lists', 'SELECT');
+    const original = lists.find(l => l.id === openedListId);
+    if (!original) return;
+
+    const updateData = {
+        items: shoppingList,
+        created_at: new Date().toISOString() // Atualiza a data conforme solicitado
     };
+
+    const res = await db.query('saved_lists', 'UPDATE', { id: openedListId, data: updateData });
+    
+    if (res && res.length > 0) {
+        showToast(`Lista "${original.name}" atualizada com sucesso!`);
+        
+        // LIMPEZA DA TELA APÓS ATUALIZAR
+        shoppingList = [];
+        openedListId = null;
+        updateListDisplay();
+        document.getElementById('comparison-results')?.classList.add('hidden');
+        
+        renderSavedLists();
+    } else {
+        showToast("Erro ao atualizar lista.");
+    }
+};
+(window as any).confirmUpdateList = confirmUpdateList;
+
+(window as any).handleSaveAction = () => {
+    if (openedListId) {
+        // Se já existe uma lista aberta, atualiza direto
+        confirmUpdateList();
+    } else {
+        // Se não, abre o modal para nomear nova lista
+        openListNameModal();
+    }
 };
 
-setupForm('form-city', 'cities', ['input-city-name', 'input-city-state'], renderAdminCities);
-setupForm('form-market', 'markets', ['market-name', 'market-city', 'market-bairro'], renderAdminMarkets);
-setupForm('form-category', 'categories', ['category-name'], renderAdminCategories);
-setupForm('form-product', 'products', ['product-name', 'product-category', 'product-barcode'], renderAdminProducts);
-setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
-setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
+const confirmSaveList = async () => {
+    const input = document.getElementById('input-new-list-name') as HTMLInputElement;
+    const name = input?.value.trim();
 
-// --- EDIT FUNCTIONS (Omitindo para brevidade, mantêm-se as lógicas originais) ---
+    if (!name) {
+        showToast("Por favor, digite um nome para a lista");
+        return;
+    }
 
-(window as any).editCity = async (id: any) => {
-    const data = await db.query('cities', 'SELECT');
-    const item = data.find(x => x.id == id);
-    if (!item) return;
-    (document.getElementById('city-id') as HTMLInputElement).value = item.id;
-    (document.getElementById('input-city-name') as HTMLInputElement).value = item.name;
-    (document.getElementById('input-city-state') as HTMLInputElement).value = item.state;
-    document.getElementById('form-city')?.scrollIntoView({ behavior: 'smooth' });
+    const newList = {
+        user_id: currentUser.id,
+        name: name,
+        items: shoppingList,
+        created_at: new Date().toISOString()
+    };
+
+    const res = await db.query('saved_lists', 'INSERT', newList);
+    
+    if (res && res.length > 0) {
+        showToast("Nova lista salva com sucesso!");
+        
+        // Também limpamos após salvar uma nova lista para manter a consistência
+        shoppingList = [];
+        openedListId = null;
+        updateListDisplay();
+        document.getElementById('comparison-results')?.classList.add('hidden');
+        
+        closeListNameModal();
+        renderSavedLists();
+    } else {
+        showToast("Erro ao conectar com o banco de dados.");
+    }
 };
-
-(window as any).editMarket = async (id: any) => {
-    const data = await db.query('markets', 'SELECT');
-    const item = data.find(x => x.id == id);
-    if (!item) return;
-    (document.getElementById('market-id') as HTMLInputElement).value = item.id;
-    (document.getElementById('market-name') as HTMLInputElement).value = item.name;
-    (document.getElementById('market-city') as HTMLSelectElement).value = item.city;
-    (document.getElementById('market-bairro') as HTMLInputElement).value = item.bairro;
-    document.getElementById('form-market')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-(window as any).editCategory = async (id: any) => {
-    const data = await db.query('categories', 'SELECT');
-    const item = data.find(x => x.id == id);
-    if (!item) return;
-    (document.getElementById('category-id') as HTMLInputElement).value = item.id;
-    (document.getElementById('category-name') as HTMLInputElement).value = item.name;
-    document.getElementById('form-category')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-(window as any).editProduct = async (id: any) => {
-    const data = await db.query('products', 'SELECT');
-    const item = data.find(x => x.id == id);
-    if (!item) return;
-    (document.getElementById('product-id') as HTMLInputElement).value = item.id;
-    (document.getElementById('product-category') as HTMLSelectElement).value = item.category;
-    (document.getElementById('product-name') as HTMLInputElement).value = item.name;
-    (document.getElementById('product-barcode') as HTMLInputElement).value = item.barcode || '';
-    document.getElementById('form-product')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-(window as any).editPrice = async (id: any) => {
-    const prices = await db.query('prices', 'SELECT');
-    const price = prices.find(p => p.id == id);
-    if (!price) return;
-    (document.getElementById('price-id') as HTMLInputElement).value = price.id;
-    (document.getElementById('price-market') as HTMLSelectElement).value = price.market;
-    (document.getElementById('price-category') as HTMLSelectElement).value = price.category;
-    await (window as any).onCategoryChangePrice();
-    (document.getElementById('price-product') as HTMLSelectElement).value = price.product;
-    (document.getElementById('price-price') as HTMLInputElement).value = price.price.toString();
-    document.getElementById('form-price')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-(window as any).editUser = async (id: any) => {
-    const users = await db.query('users', 'SELECT');
-    const u = users.find(x => x.id == id);
-    if (!u) return;
-    (document.getElementById('user-admin-id') as HTMLInputElement).value = u.id;
-    (document.getElementById('user-admin-name') as HTMLInputElement).value = u.name;
-    (document.getElementById('user-admin-email') as HTMLInputElement).value = u.email || '';
-    (document.getElementById('user-admin-city') as HTMLSelectElement).value = u.city || '';
-    (document.getElementById('user-admin-password') as HTMLInputElement).value = u.password;
-    document.getElementById('form-user-admin')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-// --- CASCADING SELECTS ---
-(window as any).onCategoryChangePrice = async () => {
-    const cat = (document.getElementById('price-category') as HTMLSelectElement).value;
-    const pSel = document.getElementById('price-product') as HTMLSelectElement;
-    if (!cat) { pSel.disabled = true; return; }
-    pSel.disabled = false;
-    const products = await db.query('products', 'SELECT');
-    const prods = products.filter(p => p.category === cat);
-    pSel.innerHTML = '<option value="">Qual item?</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-};
-
-(window as any).onCategoryChangeHome = async () => {
-    const cat = (document.getElementById('select-category') as HTMLSelectElement).value;
-    const pSel = document.getElementById('select-product') as HTMLSelectElement;
-    if (!cat) { pSel.disabled = true; return; }
-    pSel.disabled = false;
-    const products = await db.query('products', 'SELECT');
-    const prods = products.filter(p => p.category === cat);
-    pSel.innerHTML = prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-};
+(window as any).confirmSaveList = confirmSaveList;
 
 // --- HOME LOGIC ---
 async function loadHome() {
     populateDropdown('select-category', 'categories');
+    renderSavedLists();
     updateListDisplay();
 }
+
+(window as any).onCategoryChangeHome = async () => {
+    const cat = (document.getElementById('select-category') as HTMLSelectElement).value;
+    const pSel = document.getElementById('select-product') as HTMLSelectElement;
+    if (!cat) { pSel.disabled = true; pSel.innerHTML = '<option value="">...</option>'; return; }
+    pSel.disabled = false;
+    const products = await db.query('products', 'SELECT');
+    const prods = products.filter(p => p.category === cat);
+    pSel.innerHTML = '<option value="">Selecionar...</option>' + prods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+};
 
 (window as any).changeQuantity = (delta: number) => {
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;
@@ -457,9 +299,14 @@ async function loadHome() {
 };
 
 (window as any).addItem = () => {
+    const catSel = document.getElementById('select-category') as HTMLSelectElement;
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;
-    if (pSel.disabled || !pSel.value) return;
+    
+    if (pSel.disabled || !pSel.value) {
+        showToast("Selecione um produto");
+        return;
+    }
     
     const prodName = pSel.value;
     const quantity = parseInt(qIn.value) || 1;
@@ -471,7 +318,40 @@ async function loadHome() {
         shoppingList.push({ name: prodName, quantity });
     }
     
+    catSel.value = "";
+    pSel.value = "";
+    pSel.disabled = true;
+    pSel.innerHTML = '<option value="">...</option>';
     qIn.value = "1";
+    
+    updateListDisplay();
+    showToast("Item adicionado");
+};
+
+(window as any).editItem = async (name: string) => {
+    const item = shoppingList.find(i => i.name === name);
+    if (!item) return;
+
+    shoppingList = shoppingList.filter(i => i.name !== name);
+    
+    const products = await db.query('products', 'SELECT');
+    const prod = products.find(p => p.name === name);
+    
+    if (prod) {
+        const catSel = document.getElementById('select-category') as HTMLSelectElement;
+        const qIn = document.getElementById('select-quantity') as HTMLInputElement;
+        
+        catSel.value = prod.category;
+        await (window as any).onCategoryChangeHome();
+        
+        const pSel = document.getElementById('select-product') as HTMLSelectElement;
+        pSel.value = name;
+        qIn.value = item.quantity.toString();
+        
+        showToast(`Ajustando: ${name}`);
+        document.getElementById('select-category')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
     updateListDisplay();
 };
 
@@ -479,18 +359,40 @@ function updateListDisplay() {
     const c = document.getElementById('shopping-list-container');
     const a = document.getElementById('action-compare');
     if (!c) return;
+    
     c.innerHTML = shoppingList.map(item => `
-        <div class="group flex justify-between items-center p-6 bg-slate-50 rounded-2xl border border-transparent hover:bg-white hover:border-slate-100 transition-all">
-            <div class="flex items-center gap-4">
-                <span class="w-10 h-10 bg-white text-slate-800 flex items-center justify-center rounded-xl text-xs font-black shadow-sm">${item.quantity}</span>
-                <span class="font-bold text-slate-700">${item.name}</span>
+        <div class="group flex justify-between items-center p-5 bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 transition-all animate-in shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-black ring-1 ring-emerald-100">
+                    x${item.quantity}
+                </div>
+                <span class="font-bold text-slate-700 text-sm">${item.name}</span>
             </div>
-            <button onclick="removeItem('${item.name}')" class="text-slate-300 hover:text-red-500 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
+            <div class="flex items-center gap-1">
+                <button onclick="editItem('${item.name}')" class="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Alterar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button onclick="removeItem('${item.name}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Excluir">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
         </div>
     `).join('');
+    
     a?.classList.toggle('hidden', shoppingList.length === 0);
+
+    // Atualiza o título da seção dinamicamente
+    const titleEl = document.getElementById('section-list-title');
+    if (titleEl) {
+        titleEl.textContent = openedListId ? "Atualize sua Lista de Compras" : "Monte sua Lista de Compras";
+    }
+
+    // Atualiza o botão de salvar/atualizar na interface principal
+    const saveBtn = document.querySelector('#action-compare button:first-child');
+    if (saveBtn) {
+        saveBtn.textContent = openedListId ? "Atualizar Lista" : "Salvar Lista";
+        saveBtn.setAttribute('onclick', "handleSaveAction()");
+    }
 }
 
 (window as any).removeItem = (name: string) => {
@@ -498,6 +400,7 @@ function updateListDisplay() {
     updateListDisplay();
 };
 
+// --- COMPARISON LOGIC ---
 (window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
     const markets = await db.query('markets', 'SELECT');
@@ -506,12 +409,15 @@ function updateListDisplay() {
 
     let html = `
         <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden animate-in">
-            <div class="p-8 bg-slate-50/50 border-b flex justify-between items-center">
+            <div class="p-8 bg-slate-50/50 border-b flex justify-between items-center flex-wrap gap-4">
                 <div>
                     <h3 class="font-extrabold text-slate-900 tracking-tight uppercase text-sm">Painel Comparativo</h3>
                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valores atualizados em tempo real</p>
                 </div>
-                <button onclick="generatePDF()" class="bg-white text-slate-800 px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">Gerar Relatório</button>
+                <div class="flex gap-3">
+                    <button onclick="handleSaveAction()" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50">${openedListId ? 'Atualizar Lista' : 'Salvar Lista'}</button>
+                    <button onclick="window.print()" class="bg-white text-slate-800 px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">Imprimir</button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -571,35 +477,188 @@ function updateListDisplay() {
     res.scrollIntoView({ behavior: 'smooth' });
 };
 
-// --- UTILS ---
+// --- AUTH & UTILS (MANTIDOS) ---
+(window as any).logout = () => { localStorage.removeItem('app_session'); location.reload(); };
+
+(window as any).setAuthMode = async (mode: string) => {
+    const btnL = document.getElementById('btn-tab-login');
+    const btnR = document.getElementById('btn-tab-register');
+    const regF = document.getElementById('register-fields');
+    btnL?.classList.toggle('bg-white', mode === 'login');
+    btnL?.classList.toggle('shadow-sm', mode === 'login');
+    btnR?.classList.toggle('bg-white', mode === 'register');
+    btnR?.classList.toggle('shadow-sm', mode === 'register');
+    regF?.classList.toggle('hidden', mode === 'login');
+    if (mode === 'register') populateDropdown('auth-city', 'cities');
+};
+
+const authForm = document.getElementById('form-auth');
+if (authForm) {
+    authForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const uIn = (document.getElementById('auth-username') as HTMLInputElement).value;
+        const pIn = (document.getElementById('auth-password') as HTMLInputElement).value;
+        const isLogin = (document.getElementById('btn-tab-login')?.classList.contains('bg-white'));
+
+        if (!isLogin) {
+            const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
+            const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
+            const res = await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
+            if (res && res.length > 0) {
+                showToast('Conta criada!'); 
+                (window as any).setAuthMode('login');
+            }
+        } else {
+            const users = await db.query('users', 'SELECT');
+            const u = users.find(u => u.name === uIn && u.password === pIn);
+            if (u) { 
+                currentUser = u; 
+                localStorage.setItem('app_session', JSON.stringify(u)); 
+                renderApp(); 
+            } else { 
+                showToast('Acesso negado'); 
+            }
+        }
+    };
+}
+
 async function populateDropdown(id: string, table: string) {
     const el = document.getElementById(id) as HTMLSelectElement;
     if (!el) return;
     const data = await db.query(table, 'SELECT');
-    el.innerHTML = (id.includes('auth') || id.includes('select') || id.includes('price') || id.includes('admin')) ? '<option value="">Selecionar...</option>' : '';
+    el.innerHTML = '<option value="">Selecionar...</option>';
     el.innerHTML += data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
 
-(window as any).deleteRow = async (table: string, id: any) => {
-    if (confirm('Remover registro?')) {
+async function loadAdminUsers() { 
+    const data = await db.query('users', 'SELECT');
+    const tbody = document.getElementById('table-users-body');
+    if (tbody) tbody.innerHTML = data.map(u => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${u.name}</td>
+            <td class="p-6 text-slate-500">${u.email || '-'}</td>
+            <td class="p-6 text-slate-500">${u.city || '-'}</td>
+            <td class="p-6 text-slate-500 text-right">
+                <button onclick="deleteItem('users', ${u.id}, loadAdminUsers)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function loadAdminCities() { 
+    const data = await db.query('cities', 'SELECT');
+    const tbody = document.getElementById('table-cities-body');
+    if (tbody) tbody.innerHTML = data.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${c.name}</td>
+            <td class="p-6 text-slate-500 uppercase">${c.state}</td>
+            <td class="p-6 text-right">
+                <button onclick="deleteItem('cities', ${c.id}, loadAdminCities)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function loadAdminMarkets() { 
+    const data = await db.query('markets', 'SELECT');
+    const tbody = document.getElementById('table-markets-body');
+    if (tbody) tbody.innerHTML = data.map(m => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${m.name}</td>
+            <td class="p-6 text-slate-500">${m.city}</td>
+            <td class="p-6 text-slate-500">${m.bairro}</td>
+            <td class="p-6 text-right">
+                <button onclick="deleteItem('markets', ${m.id}, loadAdminMarkets)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function loadAdminCategories() { 
+    const data = await db.query('categories', 'SELECT');
+    const tbody = document.getElementById('table-categories-body');
+    if (tbody) tbody.innerHTML = data.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${c.name}</td>
+            <td class="p-6 text-right">
+                <button onclick="deleteItem('categories', ${c.id}, loadAdminCategories)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function loadAdminProducts() { 
+    const data = await db.query('products', 'SELECT');
+    const tbody = document.getElementById('table-products-body');
+    if (tbody) tbody.innerHTML = data.map(p => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-bold text-slate-700">${p.name}</td>
+            <td class="p-6 text-slate-500">${p.category}</td>
+            <td class="p-6 text-slate-500 font-mono">${p.barcode || '-'}</td>
+            <td class="p-6 text-right">
+                <button onclick="deleteItem('products', ${p.id}, loadAdminProducts)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+async function loadAdminPrices() { 
+    const data = await db.query('prices', 'SELECT');
+    const tbody = document.getElementById('table-prices-body');
+    if (tbody) tbody.innerHTML = data.map(p => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="p-6 font-black text-emerald-600">R$ ${formatPrice(p.price)}</td>
+            <td class="p-6 text-slate-700 font-bold">${p.market}</td>
+            <td class="p-6 text-slate-500">${p.product}</td>
+            <td class="p-6 text-right">
+                <button onclick="deleteItem('prices', ${p.id}, loadAdminPrices)" class="text-red-400 hover:text-red-600 font-bold uppercase text-[9px] tracking-widest">Excluir</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+(window as any).deleteItem = async (table: string, id: number, callback: Function) => {
+    if (confirm('Tem certeza?')) {
         await db.query(table, 'DELETE', id);
-        showView(`admin-${table}`);
+        callback();
+        showToast('Item excluído');
     }
 };
 
-function showToast(m: string) {
-    const t = document.getElementById('toast');
-    const tx = document.getElementById('toast-text');
-    if (t && tx) { tx.textContent = m; t.classList.remove('translate-y-32'); setTimeout(() => t.classList.add('translate-y-32'), 3000); }
-}
+// Form handlers
+document.getElementById('form-city')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('input-city-name') as HTMLInputElement).value;
+    const state = (document.getElementById('input-city-state') as HTMLInputElement).value;
+    await db.query('cities', 'INSERT', { name, state });
+    loadAdminCities(); (e.target as HTMLFormElement).reset();
+});
 
-(window as any).generatePDF = () => {
-    const { jsPDF } = (window as any).jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("SuperCompare - Relatório de Economia", 20, 20);
-    doc.setFontSize(10);
-    doc.text(`Lista de: ${currentUser.name} - ${new Date().toLocaleDateString()}`, 20, 30);
-    shoppingList.forEach((it, i) => doc.text(`${i+1}. ${it.name} (Qtd: ${it.quantity})`, 20, 45 + (i*8)));
-    doc.save("SuperCompare-Lista.pdf");
-};
+document.getElementById('form-market')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('market-name') as HTMLInputElement).value;
+    const city = (document.getElementById('market-city') as HTMLSelectElement).value;
+    const bairro = (document.getElementById('market-bairro') as HTMLInputElement).value;
+    await db.query('markets', 'INSERT', { name, city, bairro });
+    loadAdminMarkets(); (e.target as HTMLFormElement).reset();
+});
+
+document.getElementById('form-category')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('category-name') as HTMLInputElement).value;
+    await db.query('categories', 'INSERT', { name });
+    loadAdminCategories(); (e.target as HTMLFormElement).reset();
+});
+
+document.getElementById('form-product')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('product-name') as HTMLInputElement).value;
+    const category = (document.getElementById('product-category') as HTMLSelectElement).value;
+    const barcode = (document.getElementById('product-barcode') as HTMLInputElement).value;
+    await db.query('products', 'INSERT', { name, category, barcode });
+    loadAdminProducts(); (e.target as HTMLFormElement).reset();
+});
+
+document.getElementById('form-price')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const market = (document.getElementById('price-market') as HTMLSelectElement).value;
+    const product = (document.getElementById('price-product') as HTMLSelectElement).value;
+    const price = (document.getElementById('price-price') as HTMLInputElement).value;
+    await db.query('prices', 'INSERT', { market, product, price, updated_at: new Date().toISOString() });
+    loadAdminPrices(); (e.target as HTMLFormElement).reset();
+});
