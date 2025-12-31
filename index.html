@@ -70,17 +70,18 @@
 
         /* Efeito de Iluminação no Selo */
         .glow-effect {
-            box-shadow: 0 0 15px 2px rgba(16, 185, 129, 0.4), 0 0 30px 5px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
 
-        /* Estilo para o Nome da Marca (Sólido e Limpo) */
+        /* Estilo para o Nome da Marca */
         .brand-title {
             letter-spacing: -0.06em;
-            line-height: 0.9;
+            line-height: 1;
         }
 
         .slogan-cursive {
             font-family: 'Dancing Script', cursive;
+            letter-spacing: -0.02em;
         }
     </style>
 </head>
@@ -90,24 +91,25 @@
     <div id="auth-section" class="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc]">
         <div class="auth-card w-full max-w-sm p-10 rounded-[3rem] shadow-2xl animate-in border-none">
             
-            <!-- HEADER DA JANELA DE LOGIN (ÍCONE E NOME CENTRALIZADOS) -->
-            <div class="flex flex-col items-center mb-12">
-                <!-- LOGO DO CARRINHO -->
-                <div class="mb-6 relative flex items-center justify-center w-28 h-28 bg-emerald-50 text-emerald-600 rounded-[2.5rem] transition-transform hover:scale-105 duration-300">
-                    <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <!-- HEADER DA JANELA DE LOGIN REDIMENSIONADO -->
+            <div class="flex flex-col items-center mb-10">
+                <!-- LOGO DO CARRINHO (TAMANHO REDUZIDO) -->
+                <div class="mb-5 relative flex items-center justify-center w-28 h-28 bg-[#e9fbf3] text-[#065f46] rounded-[2.5rem] transition-transform hover:scale-105 duration-300">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                     </svg>
-                    <div class="absolute top-1 right-1 transform translate-x-1/3 -translate-y-1/3 w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center text-[14px] font-extrabold border-[3px] border-white shadow-lg glow-effect">
+                    <!-- Badge de % (TAMANHO REDUZIDO) -->
+                    <div class="absolute top-1.5 right-1.5 w-9 h-9 bg-[#10b981] text-white rounded-full flex items-center justify-center text-[14px] font-extrabold border-[3px] border-white shadow-md">
                         %
                     </div>
                 </div>
                 
-                <!-- NOME E SLOGAN - AJUSTADOS (PROXIMIDADE E TAMANHO) -->
+                <!-- NOME E SLOGAN (TAMANHO REDUZIDO E CENTRALIZADO) -->
                 <div class="text-center">
-                    <h1 class="text-5xl font-black text-[#0f172a] brand-title tracking-tighter">
-                        Super<span class="text-emerald-600">Compare</span>
+                    <h1 class="text-[42px] font-black brand-title flex items-center justify-center gap-0">
+                        <span class="text-[#0f172a]">Super</span><span class="text-[#10b981]">Compare</span>
                     </h1>
-                    <p class="slogan-cursive text-[25px] font-bold text-indigo-500 mt-0.5">
+                    <p class="slogan-cursive text-[22px] font-bold text-[#5c67f2] mt-[-6px]">
                         Seu mercado, pelo menor preço.
                     </p>
                 </div>
@@ -132,7 +134,7 @@
         </div>
     </div>
 
-    <!-- MAIN APP -->
+    <!-- MAIN APP (SEM ALTERAÇÕES) -->
     <div id="main-app" class="hidden">
         <header class="bg-white border-b border-slate-100 p-4 md:p-6 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
@@ -149,9 +151,9 @@
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-xl md:text-2xl font-black text-[#0f172a] brand-title tracking-tighter leading-none">
-                            Super<span class="text-emerald-600">Compare</span>
+                            Super<span class="text-[#10b981]">Compare</span>
                         </h1>
-                        <p class="slogan-cursive text-[11px] md:text-[13px] font-bold text-indigo-500 mt-0.5 leading-none">
+                        <p class="slogan-cursive text-[11px] md:text-[13px] font-bold text-[#5c67f2] mt-0.5 leading-none">
                             Seu mercado, pelo menor preço.
                         </p>
                     </div>
@@ -176,34 +178,13 @@
 
         <main class="max-w-7xl mx-auto p-4 md:p-8">
             <!-- HOME VIEW (DASHBOARD) -->
-            <div id="view-home" class="animate-in space-y-8 flex flex-col items-center">
-                
-                <!-- BRAND HERO -->
-                <div class="flex flex-col items-center mb-6">
-                    <div class="mb-6 relative flex items-center justify-center w-28 h-28 bg-emerald-50 text-emerald-600 rounded-[2.5rem] transition-transform hover:scale-105 duration-300">
-                        <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                        </svg>
-                        <div class="absolute top-1 right-1 transform translate-x-1/3 -translate-y-1/3 w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center text-[14px] font-extrabold border-[3px] border-white shadow-lg glow-effect">
-                            %
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <h1 class="text-5xl font-black text-[#0f172a] brand-title tracking-tighter">
-                            Super<span class="text-emerald-600">Compare</span>
-                        </h1>
-                        <p class="slogan-cursive text-[25px] font-bold text-indigo-500 mt-0.5">
-                            Seu mercado, pelo menor preço.
-                        </p>
-                    </div>
-                </div>
-
+            <div id="view-home" class="animate-in space-y-8 flex flex-col items-center pt-8">
                 <div class="grid grid-cols-1 gap-6 w-full max-w-lg">
                     <button onclick="showView('saved-lists')" class="dashboard-btn bg-white p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
                         <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                         </div>
-                        <span class="font-bold text-slate-700 text-lg">Lista de compras salvas</span>
+                        <span class="font-bold text-slate-700 text-lg">Minhas Listas de Compras</span>
                     </button>
                     <button onclick="showView('quick-search')" class="dashboard-btn bg-white p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
                         <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex-shrink-0 flex items-center justify-center">
@@ -220,12 +201,244 @@
                 </div>
             </div>
 
-            <!-- RESTANTE DAS VIEWS (MANTIDO) -->
-            <div id="view-saved-lists" class="hidden animate-in space-y-6">
-                <!-- ... -->
+            <div id="view-saved-lists" class="hidden animate-in space-y-12">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Minhas Listas</h2>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gerencie suas economias</p>
+                    </div>
+                    <button onclick="showView('build-list')" class="btn-primary px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                        Nova Lista
+                    </button>
+                </div>
+                <div id="saved-lists-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Dinâmico -->
+                </div>
             </div>
-            <!-- ... -->
+            
+            <!-- QUICK SEARCH VIEW -->
+            <div id="view-quick-search" class="hidden animate-in space-y-8">
+                <div class="max-w-xl mx-auto space-y-8">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Comparação Rápida</h2>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Escanear e Economizar</p>
+                    </div>
+                    
+                    <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl space-y-8">
+                        <button onclick="startScanner('quick-search-barcode')" class="w-full aspect-video bg-emerald-50 rounded-[2.5rem] border-4 border-dashed border-emerald-100 flex flex-col items-center justify-center gap-4 group hover:bg-emerald-100 transition-all">
+                            <div class="w-20 h-20 bg-white text-emerald-600 rounded-[2rem] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" /></svg>
+                            </div>
+                            <span class="font-black text-emerald-800 text-xs uppercase tracking-widest">Abrir Câmera do Dispositivo</span>
+                        </button>
+
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Código do Produto</label>
+                            <input type="text" id="quick-search-barcode" oninput="lookupBarcode(this.value)" placeholder="Digite ou escaneie o código..." class="w-full p-6 input-minimal rounded-3xl outline-none text-lg font-bold">
+                        </div>
+
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Nome Identificado</label>
+                            <input type="text" id="quick-search-product-name" readonly placeholder="Aguardando código..." class="w-full p-6 bg-slate-50 border-none rounded-3xl text-slate-500 font-bold">
+                        </div>
+
+                        <button onclick="runQuickComparison()" class="w-full py-6 btn-primary rounded-3xl font-black text-xs uppercase tracking-[0.2em]">Consultar Preços</button>
+                    </div>
+
+                    <div id="quick-comparison-results" class="hidden animate-in"></div>
+                </div>
+            </div>
+
+            <!-- BUILD LIST VIEW -->
+            <div id="view-build-list" class="hidden animate-in space-y-12">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Montar Lista</h2>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Crie sua jornada de economia</p>
+                    </div>
+                    <div class="flex gap-4 w-full md:w-auto">
+                        <input type="text" id="input-list-name" placeholder="Nome da Lista (ex: Compras do Mês)" class="flex-1 md:w-72 p-4 input-minimal rounded-2xl outline-none font-bold text-sm">
+                        <button onclick="saveList()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 transition-all">Salvar Lista</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <!-- FORMULÁRIO DE ADIÇÃO -->
+                    <div class="lg:col-span-1 space-y-8">
+                        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                            <div class="space-y-4">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">1. Categoria</label>
+                                <select id="select-category" onchange="onCategoryChangeHome()" class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm appearance-none cursor-pointer"></select>
+                            </div>
+                            <div class="space-y-4">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">2. Produto</label>
+                                <select id="select-product" disabled class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm appearance-none cursor-pointer disabled:opacity-50"></select>
+                            </div>
+                            <div class="space-y-4">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">3. Quantidade</label>
+                                <input type="number" id="select-quantity" value="1" min="1" class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm">
+                            </div>
+                            <button onclick="addItem()" class="w-full py-5 btn-primary rounded-2xl font-black text-[10px] uppercase tracking-widest mt-4">Adicionar à Lista</button>
+                        </div>
+                    </div>
+
+                    <!-- LISTA ATUAL -->
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="flex justify-between items-center px-4">
+                            <h3 class="font-extrabold text-slate-800 uppercase text-xs tracking-widest">Itens Selecionados</h3>
+                            <button id="action-list-tools" onclick="runComparison()" class="hidden text-emerald-600 font-bold text-[10px] uppercase tracking-widest hover:underline">Ver Comparativo de Preços</button>
+                        </div>
+                        <div id="shopping-list-container" class="space-y-3">
+                            <div class="py-20 text-center border-4 border-dashed border-slate-50 rounded-[3rem]">
+                                <p class="text-slate-300 font-bold text-sm uppercase tracking-widest">Sua lista está vazia</p>
+                            </div>
+                        </div>
+                        <div id="comparison-results" class="hidden pt-12 space-y-8"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN VIEWS -->
+            <div id="view-admin-menu" class="hidden animate-in space-y-12">
+                <div class="text-center">
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Administração</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão Global de Dados</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                    <button onclick="showView('admin-users')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Usuários</span>
+                    </button>
+                    <button onclick="showView('admin-cities')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Cidades</span>
+                    </button>
+                    <button onclick="showView('admin-markets')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Mercados</span>
+                    </button>
+                    <button onclick="showView('admin-categories')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M13 7h.01M13 11h.01M13 15h.01M17 7h.01M17 11h.01M17 15h.01" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Categorias</span>
+                    </button>
+                    <button onclick="showView('admin-products')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Produtos</span>
+                    </button>
+                    <button onclick="showView('admin-prices')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3z" /><path stroke-width="2" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" /></svg></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-600 font-black">Preços</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ADMIN SUB-VIEWS -->
+            <div id="view-admin-users" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Usuários</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-user-admin" class="space-y-6">
+                            <input type="hidden" id="user-admin-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nome Completo</label><input type="text" id="user-admin-name" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">E-mail</label><input type="email" id="user-admin-email" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm"></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Cidade</label><select id="user-admin-city" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none"></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</label><input type="text" id="user-admin-password" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <button type="submit" class="w-full py-4 btn-primary rounded-xl font-black text-[10px] uppercase tracking-widest">Salvar Usuário</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">E-mail</th><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Data</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-users-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
+
+            <div id="view-admin-cities" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Cidades</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-city" class="space-y-6">
+                            <input type="hidden" id="city-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nome da Cidade</label><input type="text" id="input-city-name" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado (UF)</label><input type="text" id="input-city-state" maxlength="2" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm uppercase" required></div>
+                            <button type="submit" class="w-full py-4 btn-primary rounded-xl font-black text-[10px] uppercase tracking-widest">Salvar Cidade</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Estado</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-cities-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
+
+            <div id="view-admin-markets" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Mercados</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-market" class="space-y-6">
+                            <input type="hidden" id="market-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nome do Mercado</label><input type="text" id="market-name" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Cidade</label><select id="market-city" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none" required></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Bairro</label><input type="text" id="market-bairro" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <button type="submit" class="w-full py-4 btn-primary rounded-xl font-black text-[10px] uppercase tracking-widest">Salvar Mercado</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Bairro</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-markets-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
+
+            <div id="view-admin-categories" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Categorias</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-category" class="space-y-6">
+                            <input type="hidden" id="category-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nome da Categoria</label><input type="text" id="category-name" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <button type="submit" class="w-full py-4 btn-primary rounded-xl font-black text-[10px] uppercase tracking-widest">Salvar Categoria</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-categories-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
+
+            <div id="view-admin-products" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Produtos</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-product" class="space-y-6">
+                            <input type="hidden" id="product-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Categoria</label><select id="product-category" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none" required></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nome do Produto</label><input type="text" id="product-name" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Código de Barras (Opcional)</label><div class="flex gap-2"><input type="text" id="product-barcode" class="flex-1 p-4 input-minimal rounded-xl outline-none font-bold text-sm"><button type="button" onclick="startScanner('product-barcode')" class="p-4 bg-slate-100 rounded-xl text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" /></svg></button></div></div>
+                            <button type="submit" class="w-full py-4 btn-primary rounded-xl font-black text-[10px] uppercase tracking-widest">Salvar Produto</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">Categoria</th><th class="p-6 text-left">Código</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-products-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
+
+            <div id="view-admin-prices" class="hidden animate-in space-y-8">
+                <div class="flex items-center gap-4"><button onclick="showView('admin-menu')" class="text-slate-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><h2 class="text-2xl font-black text-slate-900">Gerenciar Preços</h2></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <form id="form-price" class="space-y-6">
+                            <input type="hidden" id="price-id">
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Mercado</label><select id="price-market" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none" required></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Filtrar Categoria</label><select id="price-category" onchange="onCategoryChangePrice()" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none" required></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Produto</label><select id="price-product" disabled class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm appearance-none disabled:opacity-50" required></select></div>
+                            <div class="space-y-2"><label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Preço (R$)</label><input type="number" step="0.01" id="price-price" class="w-full p-4 input-minimal rounded-xl outline-none font-bold text-sm" required></div>
+                            <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Publicar Preço</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div>
+                </div>
+            </div>
         </main>
+    </div>
+
+    <!-- MODAL DO SCANNER -->
+    <div id="scanner-container" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-6 backdrop-blur-md">
+        <div class="w-full max-w-sm aspect-square bg-black rounded-[3rem] overflow-hidden border-4 border-emerald-500 shadow-2xl shadow-emerald-500/20" id="reader"></div>
+        <div class="mt-8 text-center space-y-2">
+            <p class="text-white font-black text-xs uppercase tracking-widest">Aponte para o código de barras</p>
+            <p class="text-slate-400 text-[10px] font-bold">Mantenha o foco estável para leitura</p>
+        </div>
+        <button onclick="stopScanner()" class="mt-12 bg-white text-slate-900 px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest">Fechar Câmera</button>
     </div>
 
     <!-- NOTIFICATION -->
