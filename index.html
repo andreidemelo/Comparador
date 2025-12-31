@@ -152,7 +152,11 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
-                    <button id="nav-admin" onclick="showView('admin-menu')" class="hidden bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-all">Administração</button>
+                    <button id="nav-admin" onclick="showView('admin-menu')" class="hidden bg-slate-100 hover:bg-slate-200 p-2.5 rounded-xl text-slate-600 transition-all" title="Administração">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
+                        </svg>
+                    </button>
                     <div class="text-right hidden sm:block">
                         <p id="header-user-name" class="text-sm font-bold text-slate-800"></p>
                         <p id="header-user-city" class="text-[9px] font-black uppercase text-slate-400"></p>
