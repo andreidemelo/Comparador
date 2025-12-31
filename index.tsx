@@ -70,7 +70,7 @@ const formatDate = (iso: string): string => {
 };
 
 // --- SCANNER LOGIC ---
-const startScanner = async () => {
+const startScanner = async (targetId: string = 'product-barcode') => {
     const container = document.getElementById('scanner-container');
     if (container) container.classList.remove('hidden');
     
@@ -82,10 +82,13 @@ const startScanner = async () => {
             { facingMode: "environment" }, 
             config, 
             (decodedText: string) => {
-                const barcodeInput = document.getElementById('product-barcode') as HTMLInputElement;
+                const barcodeInput = document.getElementById(targetId) as HTMLInputElement;
                 if (barcodeInput) {
                     barcodeInput.value = decodedText;
                     showToast("Produto Identificado");
+                    if (targetId === 'quick-search-barcode') {
+                        (window as any).lookupBarcode(decodedText);
+                    }
                     stopScanner();
                 }
             },
@@ -99,13 +102,47 @@ const startScanner = async () => {
 
 const stopScanner = async () => {
     if (html5QrCode) {
-        await html5QrCode.stop();
+        try {
+            await html5QrCode.stop();
+        } catch(e) {}
         html5QrCode = null;
     }
     const container = document.getElementById('scanner-container');
     if (container) container.classList.add('hidden');
 };
 (window as any).stopScanner = stopScanner;
+
+// --- QUICK SEARCH LOGIC ---
+(window as any).lookupBarcode = async (barcode: string) => {
+    const nameInput = document.getElementById('quick-search-product-name') as HTMLInputElement;
+    if (!barcode) {
+        if (nameInput) nameInput.value = "";
+        return;
+    }
+    const products = await db.query('products', 'SELECT');
+    const product = products.find(p => p.barcode?.toString() === barcode.toString());
+    if (nameInput) {
+        nameInput.value = product ? product.name : "Produto não encontrado";
+    }
+};
+
+(window as any).runQuickComparison = async () => {
+    const nameInput = document.getElementById('quick-search-product-name') as HTMLInputElement;
+    const prodName = nameInput?.value;
+    if (!prodName || prodName === "Produto não encontrado" || prodName === "Aguardando código...") {
+        showToast("Insira um código de barras válido");
+        return;
+    }
+
+    // Criar uma lista temporária apenas com este item para a comparação
+    const tempOriginalList = [...shoppingList];
+    shoppingList = [{ name: prodName, quantity: 1 }];
+    
+    await (window as any).runComparison();
+    
+    // Restaurar a lista original para não perder o que o usuário já montou
+    shoppingList = tempOriginalList;
+};
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -163,7 +200,7 @@ if (authForm) {
         if (mode === 'register') {
             const eIn = (document.getElementById('auth-email') as HTMLInputElement).value;
             const cIn = (document.getElementById('auth-city') as HTMLSelectElement).value;
-            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn });
+            await db.query('users', 'INSERT', { name: uIn, email: eIn, city: cIn, password: pIn, created_at: new Date().toISOString() });
             showToast('Conta criada com sucesso!'); (window as any).setAuthMode('login');
         } else {
             const users = await db.query('users', 'SELECT');
@@ -295,7 +332,7 @@ async function renderAdminPrices() {
                 <td class="p-6 font-extrabold text-emerald-600">R$ ${formatPrice(p.price)}</td>
                 <td class="p-6 font-bold text-slate-800">${p.market}</td>
                 <td class="p-6 text-slate-600 font-medium">${p.product}</td>
-                <td class="p-6 text-[10px] text-slate-400 font-medium">${p.updatedAt.split(',')[0]}</td>
+                <td class="p-6 text-[10px] text-slate-400 font-medium">${p.updatedAt ? p.updatedAt.split(',')[0] : '-'}</td>
                 <td class="p-6 text-right flex justify-end gap-4">
                     <button onclick="editPrice(${p.id})" class="text-emerald-600 text-[10px] font-bold uppercase tracking-widest">Editar</button>
                     <button onclick="deleteRow('prices', ${p.id})" class="text-red-400 text-[10px] font-bold uppercase tracking-widest">Apagar</button>
@@ -323,13 +360,14 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
             const el = document.getElementById(fid) as any;
             if (el) {
                 let val = el.value;
-                if (fid.includes('price')) val = parseFloat(val) || 0;
+                if (fid.includes('price') && fid.endsWith('price')) val = parseFloat(val) || 0;
                 const prop = fid.split('-').pop()!;
                 data[prop] = val;
             }
         });
 
         if (table === 'prices') data.updatedAt = new Date().toLocaleString('pt-BR');
+        if (table === 'users' && !editId) data.created_at = new Date().toISOString();
 
         if (editId) {
             await db.query(table, 'UPDATE', { id: editId, data });
@@ -351,8 +389,6 @@ setupForm('form-category', 'categories', ['category-name'], renderAdminCategorie
 setupForm('form-product', 'products', ['product-name', 'product-category', 'product-barcode'], renderAdminProducts);
 setupForm('form-price', 'prices', ['price-market', 'price-category', 'price-product', 'price-price'], renderAdminPrices);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
-
-// --- EDIT FUNCTIONS (Omitindo para brevidade, mantêm-se as lógicas originais) ---
 
 (window as any).editCity = async (id: any) => {
     const data = await db.query('cities', 'SELECT');
@@ -445,6 +481,11 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
 async function loadHome() {
     populateDropdown('select-category', 'categories');
     updateListDisplay();
+    // Limpar campos de pesquisa rápida
+    const qb = document.getElementById('quick-search-barcode') as HTMLInputElement;
+    const qn = document.getElementById('quick-search-product-name') as HTMLInputElement;
+    if (qb) qb.value = "";
+    if (qn) qn.value = "";
 }
 
 (window as any).changeQuantity = (delta: number) => {
