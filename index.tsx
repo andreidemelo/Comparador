@@ -159,7 +159,9 @@ function checkSession() {
 
 // --- NAVIGATION ---
 const showView = async (vId: string) => {
+    // Esconder todas as views
     document.querySelectorAll('#main-app main > div').forEach(d => d.classList.add('hidden'));
+    
     const t = document.getElementById(`view-${vId}`);
     if (t) {
         t.classList.remove('hidden');
