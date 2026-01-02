@@ -60,7 +60,6 @@ class Database {
             }
             
             if (action === 'DELETE') {
-                // Conversão explícita para Number para evitar erros com BigInt do Postgres
                 const idToDelete = Number(params);
                 if (isNaN(idToDelete)) throw new Error("ID de registro inválido para exclusão.");
                 
@@ -152,7 +151,7 @@ const stopScanner = async () => {
     const nameInput = document.getElementById('quick-search-product-name') as HTMLInputElement;
     if (!barcode) { if (nameInput) nameInput.value = ""; return; }
     const products = await db.query('products', 'SELECT');
-    const product = products.find(p => p.barcode?.toString() === barcode.toString());
+    const product = products.find(p => p.barcode?.toString().trim() === barcode.trim());
     if (nameInput) nameInput.value = product ? product.name : "Produto não encontrado";
 };
 
@@ -181,10 +180,12 @@ const checkExistingPrice = async () => {
             if (priceIdInput) priceIdInput.value = existing.id;
             if (saveBtn) saveBtn.textContent = "ATUALIZAR";
             setVal('price-price', existing.price);
-            showToast("Registro existente: Modo Atualização");
+            showToast("Registro existente encontrado!");
         } else {
-            if (priceIdInput && !priceIdInput.getAttribute('data-editing')) priceIdInput.value = "";
-            if (saveBtn && !priceIdInput.getAttribute('data-editing')) saveBtn.textContent = "Salvar Registro";
+            if (priceIdInput && !priceIdInput.getAttribute('data-editing')) {
+                priceIdInput.value = "";
+                if (saveBtn) saveBtn.textContent = "Salvar Registro";
+            }
         }
     } catch (e) { console.error(e); }
 };
@@ -192,8 +193,9 @@ const checkExistingPrice = async () => {
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
     const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    const barcodeTrimmed = barcode.trim();
     
-    if (!barcode) { 
+    if (!barcodeTrimmed) { 
         if (displayInput) displayInput.value = ""; 
         if (categoryHidden) categoryHidden.value = "";
         (window as any).filterPriceList();
@@ -201,16 +203,25 @@ const checkExistingPrice = async () => {
         return; 
     }
     
-    const products = await db.query('products', 'SELECT');
-    const product = products.find(p => p.barcode?.toString() === barcode.toString());
-    
-    if (product) {
-        if (displayInput) displayInput.value = product.name;
-        if (categoryHidden) categoryHidden.value = product.category;
+    try {
+        const products = await db.query('products', 'SELECT');
+        const product = products.find(p => p.barcode && p.barcode.toString().trim() === barcodeTrimmed);
+        
+        if (product) {
+            if (displayInput) displayInput.value = product.name;
+            if (categoryHidden) categoryHidden.value = product.category;
+            showToast(`Identificado: ${product.name}`);
+        } else {
+            // Se não encontrar, mantemos o campo livre para o usuário digitar mas limpamos a categoria técnica
+            if (categoryHidden) categoryHidden.value = "Geral";
+        }
+        
+        // Atualiza a visualização e checa se já tem preço cadastrado para esse produto no mercado selecionado
+        (window as any).filterPriceList();
+        await checkExistingPrice();
+    } catch (e) {
+        console.error("Erro ao buscar produto por barcode:", e);
     }
-    
-    (window as any).filterPriceList();
-    checkExistingPrice();
 };
 
 (window as any).runQuickComparison = async () => {
