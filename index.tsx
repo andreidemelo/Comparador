@@ -139,14 +139,17 @@ const stopScanner = async () => {
 
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
+    const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
     if (!barcode) { 
         if (displayInput) displayInput.value = ""; 
+        if (categoryHidden) categoryHidden.value = "";
         return; 
     }
     const products = await db.query('products', 'SELECT');
     const product = products.find(p => p.barcode?.toString() === barcode.toString());
-    if (product && displayInput) {
-        displayInput.value = product.name;
+    if (product) {
+        if (displayInput) displayInput.value = product.name;
+        if (categoryHidden) categoryHidden.value = product.category;
     }
 };
 
@@ -471,7 +474,16 @@ async function renderAdminPrices() {
     populateDropdown('price-market', 'markets');
     const prcs = await db.query('prices', 'SELECT');
     const body = document.getElementById('table-prices-body');
-    if (body) body.innerHTML = prcs.map(p => `<tr class="border-b"> <td class="p-6 font-bold text-emerald-600">R$ ${formatPrice(p.price)}</td> <td class="p-6">${p.market}</td> <td class="p-6">${p.product}</td> <td class="p-6 text-right"><button onclick="editPrice(${p.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = prcs.map(p => `
+        <tr class="border-b"> 
+            <td class="p-6 font-bold text-emerald-600">R$ ${formatPrice(p.price)}</td> 
+            <td class="p-6">${p.market}</td> 
+            <td class="p-6">${p.product}</td> 
+            <td class="p-6 text-right flex justify-end gap-3">
+                <button onclick="editPrice(${p.id})" class="text-emerald-600 font-bold text-[10px] uppercase">Alterar</button>
+                <button onclick="deletePrice(${p.id})" class="text-red-600 font-bold text-[10px] uppercase">Excluir</button>
+            </td> 
+        </tr>`).join('');
 }
 
 // --- UTILS & FORM SETUP ---
@@ -502,11 +514,18 @@ const setupPriceForm = () => {
         const productName = (document.getElementById('price-product-display') as HTMLInputElement).value;
         const priceVal = parseFloat((document.getElementById('price-price') as HTMLInputElement).value) || 0;
         const editId = (document.getElementById('price-id') as HTMLInputElement).value;
+        let category = (document.getElementById('price-category') as HTMLInputElement).value;
 
         if (!productName.trim()) return showToast("Insira o nome do produto");
 
-        // Note: barcode is NOT saved in the data object sent to the database.
-        const data = { market, product: productName, price: priceVal };
+        // If category is null/empty, we try to find it from the products table
+        if (!category) {
+            const products = await db.query('products', 'SELECT');
+            const foundProduct = products.find(p => p.name === productName);
+            category = foundProduct ? foundProduct.category : "Geral";
+        }
+
+        const data = { market, product: productName, price: priceVal, category };
 
         try {
             if (editId) await db.query('prices', 'UPDATE', { id: editId, data });
@@ -516,6 +535,7 @@ const setupPriceForm = () => {
             
             // RESET FIELDS EXCEPT MARKET
             setVal('price-id', '');
+            setVal('price-category', '');
             setVal('price-barcode', '');
             setVal('price-product-display', '');
             setVal('price-price', '');
@@ -579,6 +599,7 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     if (p) { 
         setVal('price-id', p.id); 
         setVal('price-market', p.market); 
+        setVal('price-category', p.category || ''); 
         
         // Find product to fill barcode (optional lookup for UX)
         const products = await db.query('products', 'SELECT');
@@ -587,7 +608,18 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
         setVal('price-barcode', product ? product.barcode : '');
         setVal('price-product-display', p.product);
         setVal('price-price', p.price); 
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } 
+};
+(window as any).deletePrice = async (id: any) => {
+    if (confirm('Deseja realmente excluir este registro de preço?')) {
+        try {
+            await db.query('prices', 'DELETE', id);
+            showToast('Preço excluído');
+            renderAdminPrices();
+        } catch(e) { showToast("Erro ao excluir preço"); }
+    }
 };
 (window as any).editUser = (id: any) => db.query('users', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
