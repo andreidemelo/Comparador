@@ -139,16 +139,15 @@ const stopScanner = async () => {
 
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
-    const hiddenInput = document.getElementById('price-product') as HTMLInputElement;
     if (!barcode) { 
         if (displayInput) displayInput.value = ""; 
-        if (hiddenInput) hiddenInput.value = "";
         return; 
     }
     const products = await db.query('products', 'SELECT');
     const product = products.find(p => p.barcode?.toString() === barcode.toString());
-    if (displayInput) displayInput.value = product ? product.name : "Produto não cadastrado";
-    if (hiddenInput) hiddenInput.value = product ? product.name : "";
+    if (product && displayInput) {
+        displayInput.value = product.name;
+    }
 };
 
 (window as any).runQuickComparison = async () => {
@@ -500,12 +499,13 @@ const setupPriceForm = () => {
     f.onsubmit = async (e) => {
         e.preventDefault();
         const market = (document.getElementById('price-market') as HTMLSelectElement).value;
-        const productName = (document.getElementById('price-product') as HTMLInputElement).value;
+        const productName = (document.getElementById('price-product-display') as HTMLInputElement).value;
         const priceVal = parseFloat((document.getElementById('price-price') as HTMLInputElement).value) || 0;
         const editId = (document.getElementById('price-id') as HTMLInputElement).value;
 
-        if (!productName) return showToast("Selecione um produto válido");
+        if (!productName.trim()) return showToast("Insira o nome do produto");
 
+        // Note: barcode is NOT saved in the data object sent to the database.
         const data = { market, product: productName, price: priceVal };
 
         try {
@@ -517,8 +517,7 @@ const setupPriceForm = () => {
             // RESET FIELDS EXCEPT MARKET
             setVal('price-id', '');
             setVal('price-barcode', '');
-            setVal('price-product-display', 'Aguardando código...');
-            setVal('price-product', '');
+            setVal('price-product-display', '');
             setVal('price-price', '');
             
             renderAdminPrices();
@@ -581,13 +580,12 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
         setVal('price-id', p.id); 
         setVal('price-market', p.market); 
         
-        // Find product to fill barcode and name
+        // Find product to fill barcode (optional lookup for UX)
         const products = await db.query('products', 'SELECT');
         const product = products.find(prod => prod.name === p.product);
         
         setVal('price-barcode', product ? product.barcode : '');
         setVal('price-product-display', p.product);
-        setVal('price-product', p.product);
         setVal('price-price', p.price); 
     } 
 };

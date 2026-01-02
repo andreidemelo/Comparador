@@ -372,7 +372,7 @@
                         <!-- Busca de Produto por Barcode -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Identificar Produto</label>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Identificar Produto (Opcional)</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="price-barcode" oninput="lookupBarcodeForPrice(this.value)" placeholder="Código de barras..." class="flex-1 p-5 input-minimal rounded-2xl outline-none text-sm font-bold">
                                     <button type="button" onclick="startScanner('price-barcode')" class="p-5 bg-emerald-50 text-green-brand rounded-2xl hover:bg-green-brand hover:text-white transition-all">
@@ -381,9 +381,8 @@
                                 </div>
                             </div>
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Produto Detectado</label>
-                                <input type="text" id="price-product-display" readonly placeholder="Aguardando código..." class="w-full p-5 bg-slate-50 border-none rounded-2xl text-slate-500 font-bold text-sm">
-                                <input type="hidden" id="price-product">
+                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Nome do Produto</label>
+                                <input type="text" id="price-product-display" placeholder="Nome do item..." class="w-full p-5 input-minimal rounded-2xl outline-none text-sm font-bold shadow-sm" required>
                             </div>
                         </div>
 
