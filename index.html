@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VALEBEM - Inteligência em Preços</title>
+    <title>ValeBem - Inteligência em Preços</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Biblioteca para Leitura de Código de Barras -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -34,8 +34,8 @@
 
         .input-minimal:focus {
             background: #fff;
-            border-color: #10b981;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            border-color: #01623B;
+            box-shadow: 0 0 0 4px rgba(1, 98, 59, 0.1);
         }
 
         .btn-primary {
@@ -50,14 +50,28 @@
             box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.2);
         }
 
-        /* Estilo VALEBEM */
-        .valebem-brand-name {
-            font-size: 42px;
+        /* Estilo ValeBem - Proporções Ajustadas */
+        .valebem-title {
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 55px;
             font-weight: 800;
-            color: #006b3f;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.06em;
+            line-height: 0.9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .text-green-brand { color: #01623B; }
+        .text-dark-brand { color: #0f172a; }
+
+        .valebem-slogan {
+            font-size: 11px;
+            font-weight: 800;
+            color: #94a3b8;
             margin-top: 12px;
-            line-height: 1;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
         }
 
         .dashboard-btn {
@@ -67,25 +81,51 @@
         }
         .dashboard-btn:hover {
             transform: translateY(-5px);
-            border-color: #10b981;
+            border-color: #01623B;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
         }
+
+        /* Logo Scale & Proportion */
+        .valebem-logo-container {
+            width: 100px; /* Reduzido para harmonia com texto 55px */
+            height: 100px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 8px 12px rgba(1, 98, 59, 0.12));
+        }
+        
+        .bg-green-brand { background-color: #01623B; }
+        .border-green-brand { border-color: #01623B; }
+        .shadow-green-brand { --tw-shadow-color: rgba(1, 98, 59, 0.2); shadow-color: var(--tw-shadow-color); }
     </style>
 </head>
 <body class="text-slate-900 min-h-screen">
 
     <!-- AUTH SECTION -->
-    <div id="auth-section" class="min-h-screen flex items-center justify-center p-6 bg-white">
-        <div class="w-full max-w-sm text-center animate-in">
+    <div id="auth-section" class="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc]">
+        <div class="w-full max-w-sm flex flex-col items-center animate-in">
             
-            <!-- LOGO VALEBEM PADRÃO -->
-            <div class="flex flex-col items-center mb-10">
-                <img src="logo.png" alt="VALEBEM Logo" class="w-40 h-40 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300">
-                <h1 class="valebem-brand-name">VALEBEM</h1>
+            <!-- BRANDING LOCKUP - HARMONIZED -->
+            <div class="flex flex-col items-center text-center mb-12">
+                <div class="valebem-logo-container">
+                    <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15 25C15 25 22 25 25 25C28 25 30 27 31 30L42 75H85" stroke="#01623B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M35 35H92L85 65H40" stroke="#01623B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="48" cy="88" r="6" fill="#01623B" />
+                        <circle cx="78" cy="88" r="6" fill="#01623B" />
+                    </svg>
+                </div>
+                <h1 class="valebem-title">
+                    <span class="text-dark-brand">Vale</span><span class="text-green-brand">Bem</span>
+                </h1>
+                <p class="valebem-slogan">Comprar bem é economizar</p>
             </div>
 
-            <div class="auth-card p-10 rounded-[2.5rem] shadow-xl border-slate-50">
-                <div class="flex p-1 bg-slate-100 rounded-2xl mb-8">
+            <!-- LOGIN CARD -->
+            <div class="auth-card w-full p-10 rounded-[3rem] shadow-2xl border-none">
+                <div class="flex p-1.5 bg-slate-100 rounded-2xl mb-8">
                     <button id="btn-tab-login" onclick="setAuthMode('login')" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl transition-all bg-white shadow-sm text-slate-800">Entrar</button>
                     <button id="btn-tab-register" onclick="setAuthMode('register')" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl transition-all text-slate-400">Criar Conta</button>
                 </div>
@@ -99,7 +139,7 @@
                         </select>
                     </div>
                     <input type="password" id="auth-password" placeholder="Senha" class="w-full p-4 input-minimal rounded-2xl outline-none text-sm font-medium" required>
-                    <button type="submit" class="w-full py-5 btn-primary rounded-2xl font-bold text-sm tracking-tight mt-4 shadow-xl shadow-slate-200 hover:shadow-emerald-100 transition-all">Acessar Plataforma</button>
+                    <button type="submit" class="w-full py-5 btn-primary rounded-2xl font-bold text-sm tracking-tight mt-4 shadow-xl shadow-slate-200 hover:shadow-green-brand/20 transition-all">Acessar Plataforma</button>
                 </form>
             </div>
         </div>
@@ -112,10 +152,17 @@
                 
                 <!-- CABEÇALHO COM LOGO -->
                 <div class="flex items-center gap-4 cursor-pointer group" onclick="showView('home')">
-                    <img src="logo.png" alt="VALEBEM" class="w-10 h-10 object-contain transition-all group-hover:scale-110">
+                    <div class="relative flex items-center justify-center w-10 h-10 bg-green-brand text-white rounded-xl transition-all group-hover:scale-110">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 1h4l2 9h12l3-6H6" />
+                            <circle cx="9" cy="20" r="1.5" />
+                            <circle cx="17" cy="20" r="1.5" />
+                            <path d="M11 11l2 2 4-4" />
+                        </svg>
+                    </div>
                     <div class="flex flex-col">
-                        <h1 class="text-xl font-extrabold text-[#006b3f] tracking-tight leading-none">
-                            VALEBEM
+                        <h1 class="text-xl font-extrabold text-[#0f172a] tracking-tighter leading-none">
+                            Vale<span class="text-green-brand">Bem</span>
                         </h1>
                     </div>
                 </div>
@@ -148,7 +195,7 @@
                         <span class="font-bold text-slate-700 text-lg">Minhas Listas de Compras</span>
                     </button>
                     <button onclick="showView('quick-search')" class="dashboard-btn bg-white p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
-                        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex-shrink-0 flex items-center justify-center">
+                        <div class="w-16 h-16 bg-emerald-50 text-green-brand rounded-2xl flex-shrink-0 flex items-center justify-center">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m0 11v1m5-12h1a2 2 0 012 2v1m-17 0V7a2 2 0 012-2h1m12 12v1a2 2 0 01-2 2h-1m-4 0H7a2 2 0 01-2-2v-1m4-13V3m0 0v1m0 11v1m0 0v1" /></svg>
                         </div>
                         <span class="font-bold text-slate-700 text-lg">Pesquisa rápida por código de barras</span>
@@ -180,15 +227,15 @@
                 <div class="max-w-xl mx-auto space-y-8 text-center">
                     <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Comparação Rápida</h2>
                     <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl space-y-8">
-                        <button onclick="startScanner('quick-search-barcode')" class="w-full aspect-video bg-emerald-50 rounded-[2.5rem] border-4 border-dashed border-emerald-100 flex flex-col items-center justify-center gap-4 group hover:bg-emerald-100 transition-all">
-                            <div class="w-20 h-20 bg-white text-emerald-600 rounded-[2rem] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <button onclick="startScanner('quick-search-barcode')" class="w-full aspect-video bg-emerald-50 rounded-[2.5rem] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 group hover:bg-slate-100 transition-all">
+                            <div class="w-20 h-20 bg-white text-green-brand rounded-[2rem] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" /></svg>
                             </div>
-                            <span class="font-black text-emerald-800 text-xs uppercase tracking-widest">Abrir Câmera</span>
+                            <span class="font-black text-slate-800 text-xs uppercase tracking-widest">Abrir Câmera</span>
                         </button>
                         <input type="text" id="quick-search-barcode" oninput="lookupBarcode(this.value)" placeholder="Código de barras..." class="w-full p-6 input-minimal rounded-3xl outline-none text-lg font-bold">
                         <input type="text" id="quick-search-product-name" readonly placeholder="Aguardando código..." class="w-full p-6 bg-slate-50 border-none rounded-3xl text-slate-500 font-bold">
-                        <button onclick="runQuickComparison()" class="w-full py-6 bg-emerald-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em]">Consultar Preços</button>
+                        <button onclick="runQuickComparison()" class="w-full py-6 bg-green-brand text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em]">Consultar Preços</button>
                     </div>
                     <div id="quick-comparison-results" class="hidden animate-in"></div>
                 </div>
@@ -199,7 +246,7 @@
                     <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Montar Lista</h2>
                     <div class="flex gap-4 w-full md:w-auto">
                         <input type="text" id="input-list-name" placeholder="Nome da Lista" class="flex-1 md:w-72 p-4 input-minimal rounded-2xl outline-none font-bold text-sm">
-                        <button onclick="saveList()" class="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest">Salvar</button>
+                        <button onclick="saveList()" class="bg-green-brand text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest">Salvar</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -212,7 +259,7 @@
                     <div class="lg:col-span-2 space-y-8">
                         <div class="flex justify-between items-center px-4">
                             <h3 class="font-extrabold text-slate-800 uppercase text-xs tracking-widest">Itens</h3>
-                            <button id="action-list-tools" onclick="runComparison()" class="hidden text-emerald-600 font-bold text-[10px] uppercase tracking-widest hover:underline">Comparar Preços</button>
+                            <button id="action-list-tools" onclick="runComparison()" class="hidden text-green-brand font-bold text-[10px] uppercase tracking-widest hover:underline">Comparar Preços</button>
                         </div>
                         <div id="shopping-list-container" class="space-y-3"></div>
                         <div id="comparison-results" class="hidden pt-12"></div>
@@ -223,28 +270,28 @@
             <!-- ADMIN VIEWS -->
             <div id="view-admin-menu" class="hidden animate-in space-y-12">
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-                    <button onclick="showView('admin-users')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Usuários</button>
-                    <button onclick="showView('admin-cities')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Cidades</button>
-                    <button onclick="showView('admin-markets')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Mercados</button>
-                    <button onclick="showView('admin-categories')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Categorias</button>
-                    <button onclick="showView('admin-products')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Produtos</button>
-                    <button onclick="showView('admin-prices')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-emerald-500 transition-all flex flex-col items-center gap-4">Preços</button>
+                    <button onclick="showView('admin-users')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Usuários</button>
+                    <button onclick="showView('admin-cities')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Cidades</button>
+                    <button onclick="showView('admin-markets')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Mercados</button>
+                    <button onclick="showView('admin-categories')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Categorias</button>
+                    <button onclick="showView('admin-products')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Produtos</button>
+                    <button onclick="showView('admin-prices')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Preços</button>
                 </div>
             </div>
             
-            <div id="view-admin-users" class="hidden animate-in"><tbody id="table-users-body"></tbody></div>
-            <div id="view-admin-cities" class="hidden animate-in"><tbody id="table-cities-body"></tbody></div>
-            <div id="view-admin-markets" class="hidden animate-in"><tbody id="table-markets-body"></tbody></div>
-            <div id="view-admin-categories" class="hidden animate-in"><tbody id="table-categories-body"></tbody></div>
-            <div id="view-admin-products" class="hidden animate-in"><tbody id="table-products-body"></tbody></div>
-            <div id="view-admin-prices" class="hidden animate-in"><tbody id="table-prices-body"></tbody></div>
+            <div id="view-admin-users" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">E-mail</th><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Data</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-users-body" class="text-sm"></tbody></table></div></div>
+            <div id="view-admin-cities" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Estado</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-cities-body" class="text-sm"></tbody></table></div></div>
+            <div id="view-admin-markets" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">Cidade</th><th class="p-6 text-left">Bairro</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-markets-body" class="text-sm"></tbody></table></div></div>
+            <div id="view-admin-categories" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-categories-body" class="text-sm"></tbody></table></div></div>
+            <div id="view-admin-products" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Nome</th><th class="p-6 text-left">Categoria</th><th class="p-6 text-left">Código</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-products-body" class="text-sm"></tbody></table></div></div>
+            <div id="view-admin-prices" class="hidden animate-in"><div class="overflow-x-auto"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div></div>
 
         </main>
     </div>
 
     <!-- MODAL DO SCANNER -->
     <div id="scanner-container" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-6 backdrop-blur-md">
-        <div class="w-full max-w-sm aspect-square bg-black rounded-[3rem] overflow-hidden border-4 border-emerald-500 shadow-2xl shadow-emerald-500/20" id="reader"></div>
+        <div class="w-full max-w-sm aspect-square bg-black rounded-[3rem] overflow-hidden border-4 border-green-brand shadow-2xl shadow-green-brand/20" id="reader"></div>
         <button onclick="stopScanner()" class="mt-12 bg-white text-slate-900 px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest">Fechar</button>
     </div>
 
