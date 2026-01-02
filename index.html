@@ -367,7 +367,7 @@
                         <!-- Supermercado Separado -->
                         <div class="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 transition-all focus-within:border-green-brand/30">
                             <label class="block text-[10px] font-black uppercase text-slate-400 mb-3 px-2 tracking-widest">Supermercado</label>
-                            <select id="price-market" class="w-full p-4 bg-white rounded-2xl outline-none text-sm font-bold border-none shadow-sm appearance-none" required></select>
+                            <select id="price-market" onchange="filterPriceList()" class="w-full p-4 bg-white rounded-2xl outline-none text-sm font-bold border-none shadow-sm appearance-none" required></select>
                         </div>
 
                         <!-- Busca de Produto por Barcode -->
@@ -396,7 +396,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-green-brand transition-all hover:scale-[1.02]">Salvar Registro</button>
+                        <button type="submit" id="btn-save-price" class="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-green-brand transition-all hover:scale-[1.02]">Salvar Registro</button>
                     </form>
                 </div>
                 <div class="overflow-x-auto mt-12"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div>

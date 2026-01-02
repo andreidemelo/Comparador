@@ -3,6 +3,16 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 /**
  * --- SCRIPT SQL PARA O SUPABASE ---
+ * 
+ * create table if not exists prices (
+ *    id bigint primary key generated always as identity,
+ *    market text not null,
+ *    product text not null,
+ *    price numeric not null,
+ *    category text,
+ *    created_at timestamp with time zone default now()
+ * );
+ * 
  * create table if not exists saved_lists (
  *    id bigint primary key generated always as identity, 
  *    user_id bigint references users(id), 
@@ -11,6 +21,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
  *    created_at timestamp with time zone default now()
  * );
  * alter table saved_lists disable row level security;
+ * alter table prices disable row level security;
  */
 
 const SUPABASE_URL = 'https://zagebrolhkzdqezmijdi.supabase.co';
@@ -20,12 +31,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 class Database {
     async query(table: string, action: 'SELECT' | 'INSERT' | 'DELETE' | 'UPDATE', params: any = null): Promise<any[]> {
+        console.log(`[Database] ${action} em ${table}`, params);
         try {
             if (action === 'SELECT') {
                 let query = supabase.from(table).select('*');
                 if (params && params.eq && params.eq[1] !== undefined && params.eq[1] !== null) {
                     query = query.eq(params.eq[0], params.eq[1]);
                 }
+                
+                // Ordenação padrão por tabela
                 if (['cities', 'markets', 'categories', 'products', 'users'].includes(table)) {
                     query = query.order('name', { ascending: true });
                 } else if (table === 'prices') {
@@ -35,30 +49,35 @@ class Database {
                 }
 
                 const { data, error } = await query;
-                if (error) {
-                    if (error.code === '42P01') showToast(`Erro: Tabela '${table}' não existe.`);
-                    throw error;
-                }
+                if (error) throw error;
                 return data || [];
             }
+            
             if (action === 'INSERT') {
                 const { data, error } = await supabase.from(table).insert([params]).select();
                 if (error) throw error;
                 return data || [];
             }
+            
             if (action === 'DELETE') {
-                const { error } = await supabase.from(table).delete().eq('id', params);
+                // Conversão explícita para Number para evitar erros com BigInt do Postgres
+                const idToDelete = Number(params);
+                if (isNaN(idToDelete)) throw new Error("ID de registro inválido para exclusão.");
+                
+                const { error } = await supabase.from(table).delete().eq('id', idToDelete);
                 if (error) throw error;
                 return [];
             }
+            
             if (action === 'UPDATE') {
-                const { data, error } = await supabase.from(table).update(params.data).eq('id', params.id).select();
+                const idToUpdate = Number(params.id);
+                const { data, error } = await supabase.from(table).update(params.data).eq('id', idToUpdate).select();
                 if (error) throw error;
                 return data || [];
             }
         } catch (err: any) {
-            console.error(`Erro SQL (${action} em ${table}):`, err.message);
-            throw err; 
+            console.error(`[Database Error] ${action} em ${table}:`, err);
+            throw err;
         }
         return [];
     }
@@ -66,13 +85,13 @@ class Database {
 
 const db = new Database();
 
-// --- APP STATE ---
+// --- ESTADO DO APP ---
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
 let currentListId: any = null; 
 let html5QrCode: any = null;
 
-// --- HELPERS ---
+// --- AUXILIARES ---
 const formatPrice = (val: any): string => {
     const num = parseFloat(val);
     return isNaN(num) ? "0,00" : num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -90,7 +109,7 @@ const showToast = (m: string) => {
     if (t && tx) { 
         tx.textContent = m; 
         t.classList.remove('translate-y-32'); 
-        setTimeout(() => t.classList.add('translate-y-32'), 5000); 
+        setTimeout(() => t.classList.add('translate-y-32'), 4000); 
     }
 };
 
@@ -99,7 +118,7 @@ const setVal = (id: string, val: any) => {
     if (el) el.value = val === null || val === undefined ? '' : val.toString();
 };
 
-// --- SCANNER LOGIC ---
+// --- LÓGICA DO SCANNER ---
 const startScanner = async (targetId: string = 'product-barcode') => {
     const container = document.getElementById('scanner-container');
     if (container) container.classList.remove('hidden');
@@ -128,7 +147,7 @@ const stopScanner = async () => {
 };
 (window as any).stopScanner = stopScanner;
 
-// --- QUICK SEARCH LOGIC ---
+// --- PESQUISA RÁPIDA ---
 (window as any).lookupBarcode = async (barcode: string) => {
     const nameInput = document.getElementById('quick-search-product-name') as HTMLInputElement;
     if (!barcode) { if (nameInput) nameInput.value = ""; return; }
@@ -137,20 +156,61 @@ const stopScanner = async () => {
     if (nameInput) nameInput.value = product ? product.name : "Produto não encontrado";
 };
 
+// Checar duplicatas ou existência de preço
+const checkExistingPrice = async () => {
+    const marketSelect = document.getElementById('price-market') as HTMLSelectElement;
+    const productInput = document.getElementById('price-product-display') as HTMLInputElement;
+    if (!marketSelect || !productInput) return;
+
+    const market = marketSelect.value;
+    const productName = productInput.value;
+    const priceIdInput = document.getElementById('price-id') as HTMLInputElement;
+    const saveBtn = document.getElementById('btn-save-price') as HTMLButtonElement;
+
+    if (!market || !productName) {
+        if (priceIdInput) priceIdInput.value = "";
+        if (saveBtn) saveBtn.textContent = "Salvar Registro";
+        return;
+    }
+
+    try {
+        const prices = await db.query('prices', 'SELECT');
+        const existing = prices.find(p => p.market === market && p.product === productName);
+        
+        if (existing) {
+            if (priceIdInput) priceIdInput.value = existing.id;
+            if (saveBtn) saveBtn.textContent = "ATUALIZAR";
+            setVal('price-price', existing.price);
+            showToast("Registro existente: Modo Atualização");
+        } else {
+            if (priceIdInput && !priceIdInput.getAttribute('data-editing')) priceIdInput.value = "";
+            if (saveBtn && !priceIdInput.getAttribute('data-editing')) saveBtn.textContent = "Salvar Registro";
+        }
+    } catch (e) { console.error(e); }
+};
+
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
     const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    
     if (!barcode) { 
         if (displayInput) displayInput.value = ""; 
         if (categoryHidden) categoryHidden.value = "";
+        (window as any).filterPriceList();
+        checkExistingPrice();
         return; 
     }
+    
     const products = await db.query('products', 'SELECT');
     const product = products.find(p => p.barcode?.toString() === barcode.toString());
+    
     if (product) {
         if (displayInput) displayInput.value = product.name;
         if (categoryHidden) categoryHidden.value = product.category;
     }
+    
+    (window as any).filterPriceList();
+    checkExistingPrice();
 };
 
 (window as any).runQuickComparison = async () => {
@@ -169,7 +229,7 @@ const stopScanner = async () => {
     res.innerHTML = html;
 };
 
-// --- INIT & NAVIGATION ---
+// --- NAVEGAÇÃO E INIT ---
 document.addEventListener('DOMContentLoaded', () => {
     checkSession();
     setupPriceForm();
@@ -240,26 +300,22 @@ if (authForm) {
     if (mode === 'register') populateDropdown('auth-city', 'cities');
 };
 
-// --- SAVED LISTS ---
+// --- LISTAS SALVAS ---
 async function renderSavedLists() {
     const container = document.getElementById('saved-lists-container');
     if (!container) return;
     container.innerHTML = `<div class="col-span-full py-20 text-center"><p class="text-slate-400 animate-pulse font-bold uppercase text-xs">Buscando listas...</p></div>`;
     
-    if (!currentUser?.id) return showToast("Sessão inválida");
+    if (!currentUser?.id) return;
     
     try {
         const lists = await db.query('saved_lists', 'SELECT', { eq: ['user_id', currentUser.id] });
         if (!lists.length) {
-            container.innerHTML = `<div class="col-span-full py-20 text-center space-y-4">
-                <p class="text-slate-400 font-bold uppercase text-xs">Nenhuma lista salva encontrada.</p>
-                <button onclick="showView('build-list')" class="px-6 py-3 bg-emerald-100 text-emerald-700 rounded-2xl text-[10px] font-bold uppercase tracking-widest">Criar Lista</button>
-            </div>`;
+            container.innerHTML = `<div class="col-span-full py-20 text-center space-y-4"><p class="text-slate-400 font-bold uppercase text-xs">Nenhuma lista salva encontrada.</p></div>`;
             return;
         }
 
-        container.innerHTML = lists.map(list => {
-            return `
+        container.innerHTML = lists.map(list => `
             <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 hover:border-emerald-500 transition-all group animate-in">
                 <div class="flex justify-between items-start">
                     <div>
@@ -267,20 +323,13 @@ async function renderSavedLists() {
                         <p class="text-[10px] text-slate-400 font-bold uppercase">Criada em: ${formatDate(list.created_at)}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="editList(${list.id})" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                        <button onclick="deleteList(${list.id})" class="p-2 text-red-500 hover:bg-red-50 rounded-xl" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                        <button onclick="editList('${list.id}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                        <button onclick="deleteList('${list.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded-xl" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                     </div>
                 </div>
-                <button onclick="loadListToCompare(${list.id})" class="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all">Ver Comparação de Preços</button>
-            </div>`;
-        }).join('');
-    } catch(e: any) { 
-        container.innerHTML = `<div class="col-span-full py-20 text-center space-y-4">
-            <p class="text-red-500 font-bold uppercase text-xs">Erro ao carregar banco de dados</p>
-            <p class="text-[10px] text-slate-400 font-medium px-10">${e.message || 'Verifique as permissões da tabela saved_lists'}</p>
-            <button onclick="renderSavedLists()" class="text-emerald-600 font-bold text-[10px] underline">Tentar novamente</button>
-        </div>`;
-    }
+                <button onclick="loadListToCompare('${list.id}')" class="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all">Ver Comparação</button>
+            </div>`).join('');
+    } catch(e) { console.error(e); }
 }
 
 (window as any).editList = async (id: any) => {
@@ -292,11 +341,11 @@ async function renderSavedLists() {
         shoppingList = typeof list.items === 'string' ? JSON.parse(list.items || '[]') : (list.items || []);
         showView('build-list');
         setTimeout(() => setVal('input-list-name', list.name), 100);
-    } catch(e) { showToast("Erro ao carregar dados da lista"); }
+    } catch(e) { showToast("Erro ao carregar lista"); }
 };
 
 (window as any).deleteList = async (id: any) => {
-    if (confirm('Deseja realmente excluir esta lista permanentemente?')) {
+    if (confirm('Deseja realmente excluir esta lista?')) {
         try {
             await db.query('saved_lists', 'DELETE', id);
             showToast('Lista excluída');
@@ -317,7 +366,7 @@ async function renderSavedLists() {
     } catch(e) { showToast("Erro ao carregar comparação"); }
 };
 
-// --- BUILD LIST LOGIC ---
+// --- MONTAGEM DE LISTA ---
 function loadHome() {
     currentListId = null;
     shoppingList = [];
@@ -353,12 +402,8 @@ function updateListDisplay() {
                 <span class="font-bold text-slate-700">${item.name}</span>
             </div>
             <div class="flex gap-2">
-                <button onclick="editItem('${item.name}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="Editar item">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                </button>
-                <button onclick="removeItem('${item.name}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Excluir item">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                </button>
+                <button onclick="editItem('${item.name}')" class="text-slate-300 hover:text-blue-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                <button onclick="removeItem('${item.name}')" class="text-slate-300 hover:text-red-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
             </div>
         </div>`).join('');
     document.getElementById('action-list-tools')?.classList.toggle('hidden', !shoppingList.length);
@@ -377,9 +422,9 @@ function updateListDisplay() {
             setVal('select-quantity', item.quantity);
             shoppingList = shoppingList.filter(i => i.name !== name);
             updateListDisplay();
-            showToast("Item carregado para edição");
+            showToast("Item para edição");
         }
-    } catch (e) { showToast("Erro ao carregar dados do produto"); }
+    } catch (e) { console.error(e); }
 };
 
 (window as any).removeItem = (name: string) => {
@@ -390,22 +435,17 @@ function updateListDisplay() {
 (window as any).saveList = async () => {
     const nameInput = document.getElementById('input-list-name') as HTMLInputElement;
     if (!nameInput?.value.trim()) return showToast('Dê um nome para a lista');
-    if (!shoppingList.length) return showToast('Adicione itens antes de salvar');
-    const data = { 
-        user_id: currentUser.id, 
-        name: nameInput.value, 
-        items: JSON.stringify(shoppingList), 
-        created_at: new Date().toISOString() 
-    };
+    if (!shoppingList.length) return showToast('Lista vazia');
+    const data = { user_id: currentUser.id, name: nameInput.value, items: JSON.stringify(shoppingList), created_at: new Date().toISOString() };
     try {
         if (currentListId) await db.query('saved_lists', 'UPDATE', { id: currentListId, data });
         else await db.query('saved_lists', 'INSERT', data);
         showToast('Lista Salva!');
         showView('home');
-    } catch(e) { showToast("Erro ao salvar lista no banco"); }
+    } catch(e) { console.error(e); }
 };
 
-// --- COMPARISON ---
+// --- COMPARAÇÃO ---
 (window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
     if (!res) return;
@@ -438,55 +478,74 @@ function updateListDisplay() {
         res.innerHTML = html; 
         res.classList.remove('hidden'); 
         res.scrollIntoView({ behavior: 'smooth' });
-    } catch(e) { showToast("Erro ao processar comparação"); }
+    } catch(e) { console.error(e); }
 };
 
-// --- ADMIN RENDERERS ---
+// --- ADMIN ---
 async function renderAdminUsers() {
     populateDropdown('user-admin-city', 'cities');
     const users = await db.query('users', 'SELECT');
     const body = document.getElementById('table-users-body');
-    if (body) body.innerHTML = users.map(u => `<tr class="border-b"> <td class="p-6 font-bold">${u.name}</td> <td class="p-6 text-slate-500">${u.email || '-'}</td> <td class="p-6">${u.city || '-'}</td> <td class="p-6 text-slate-400">${formatDate(u.created_at)}</td> <td class="p-6 text-right"><button onclick="editUser(${u.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = users.map(u => `<tr class="border-b"> <td class="p-6 font-bold">${u.name}</td> <td class="p-6">${u.email || '-'}</td> <td class="p-6">${u.city || '-'}</td> <td class="p-6">${formatDate(u.created_at)}</td> <td class="p-6 text-right"><button onclick="editUser('${u.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
 }
 async function renderAdminCities() {
     const cities = await db.query('cities', 'SELECT');
     const body = document.getElementById('table-cities-body');
-    if (body) body.innerHTML = cities.map(c => `<tr class="border-b"> <td class="p-6 font-bold">${c.name}</td> <td class="p-6">${c.state}</td> <td class="p-6 text-right"><button onclick="editCity(${c.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = cities.map(c => `<tr class="border-b"> <td class="p-6 font-bold">${c.name}</td> <td class="p-6">${c.state}</td> <td class="p-6 text-right"><button onclick="editCity('${c.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
 }
 async function renderAdminMarkets() {
     populateDropdown('market-city', 'cities');
     const markets = await db.query('markets', 'SELECT');
     const body = document.getElementById('table-markets-body');
-    if (body) body.innerHTML = markets.map(m => `<tr class="border-b"> <td class="p-6 font-bold">${m.name}</td> <td class="p-6">${m.city}</td> <td class="p-6">${m.bairro}</td> <td class="p-6 text-right"><button onclick="editMarket(${m.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = markets.map(m => `<tr class="border-b"> <td class="p-6 font-bold">${m.name}</td> <td class="p-6">${m.city}</td> <td class="p-6">${m.bairro}</td> <td class="p-6 text-right"><button onclick="editMarket('${m.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
 }
 async function renderAdminCategories() {
     const cats = await db.query('categories', 'SELECT');
     const body = document.getElementById('table-categories-body');
-    if (body) body.innerHTML = cats.map(c => `<tr class="border-b"> <td class="p-6 font-bold">${c.name}</td> <td class="p-6 text-right"><button onclick="editCategory(${c.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = cats.map(c => `<tr class="border-b"> <td class="p-6 font-bold">${c.name}</td> <td class="p-6 text-right"><button onclick="editCategory('${c.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
 }
 async function renderAdminProducts() {
     populateDropdown('product-category', 'categories');
     const prods = await db.query('products', 'SELECT');
     const body = document.getElementById('table-products-body');
-    if (body) body.innerHTML = prods.map(p => `<tr class="border-b"> <td class="p-6 font-bold">${p.name}</td> <td class="p-6">${p.category}</td> <td class="p-6 text-slate-400 font-mono text-[10px]">${p.barcode || '-'}</td> <td class="p-6 text-right"><button onclick="editProduct(${p.id})" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = prods.map(p => `<tr class="border-b"> <td class="p-6 font-bold">${p.name}</td> <td class="p-6">${p.category}</td> <td class="p-6">${p.barcode || '-'}</td> <td class="p-6 text-right"><button onclick="editProduct('${p.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
 }
-async function renderAdminPrices() {
-    populateDropdown('price-market', 'markets');
+
+(window as any).filterPriceList = () => {
+    const m = (document.getElementById('price-market') as HTMLSelectElement)?.value || "";
+    const p = (document.getElementById('price-product-display') as HTMLInputElement)?.value || "";
+    renderAdminPrices(m, p);
+    checkExistingPrice(); 
+};
+
+async function renderAdminPrices(filterMarket = "", filterProduct = "") {
+    if (!filterMarket && !filterProduct) populateDropdown('price-market', 'markets');
+    
     const prcs = await db.query('prices', 'SELECT');
     const body = document.getElementById('table-prices-body');
-    if (body) body.innerHTML = prcs.map(p => `
-        <tr class="border-b"> 
-            <td class="p-6 font-bold text-emerald-600">R$ ${formatPrice(p.price)}</td> 
-            <td class="p-6">${p.market}</td> 
-            <td class="p-6">${p.product}</td> 
-            <td class="p-6 text-right flex justify-end gap-3">
-                <button onclick="editPrice(${p.id})" class="text-emerald-600 font-bold text-[10px] uppercase">Alterar</button>
-                <button onclick="deletePrice(${p.id})" class="text-red-600 font-bold text-[10px] uppercase">Excluir</button>
+    if (!body) return;
+
+    const filtered = prcs.filter(p => {
+        const matchesM = filterMarket ? p.market === filterMarket : true;
+        const matchesP = filterProduct ? p.product.toLowerCase().includes(filterProduct.toLowerCase()) : true;
+        return matchesM && matchesP;
+    });
+
+    body.innerHTML = filtered.map(p => `
+        <tr class="border-b hover:bg-slate-50 transition-colors"> 
+            <td class="p-3 md:p-6 font-bold text-emerald-600 text-xs md:text-sm">R$ ${formatPrice(p.price)}</td> 
+            <td class="p-3 md:p-6 text-xs md:text-sm text-slate-500">${p.market}</td> 
+            <td class="p-3 md:p-6 text-xs md:text-sm font-medium text-slate-800">${p.product}</td> 
+            <td class="p-3 md:p-6 text-right">
+                <div class="flex flex-col items-end gap-2">
+                    <button onclick="editPrice('${p.id}')" class="w-full md:w-auto bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider hover:bg-blue-100 transition-all">Alterar</button>
+                    <button onclick="deletePrice('${p.id}')" class="w-full md:w-auto bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider hover:bg-red-100 transition-all">Excluir</button>
+                </div>
             </td> 
         </tr>`).join('');
 }
 
-// --- UTILS & FORM SETUP ---
+// --- FORMS E UTILS ---
 async function populateDropdown(id: string, table: string) {
     const el = document.getElementById(id) as HTMLSelectElement;
     if (!el) return;
@@ -517,12 +576,9 @@ const setupPriceForm = () => {
         let category = (document.getElementById('price-category') as HTMLInputElement).value;
 
         if (!productName.trim()) return showToast("Insira o nome do produto");
-
-        // If category is null/empty, we try to find it from the products table
         if (!category) {
             const products = await db.query('products', 'SELECT');
-            const foundProduct = products.find(p => p.name === productName);
-            category = foundProduct ? foundProduct.category : "Geral";
+            category = products.find(p => p.name === productName)?.category || "Geral";
         }
 
         const data = { market, product: productName, price: priceVal, category };
@@ -531,19 +587,20 @@ const setupPriceForm = () => {
             if (editId) await db.query('prices', 'UPDATE', { id: editId, data });
             else await db.query('prices', 'INSERT', data);
             
-            showToast('Preço salvo com sucesso!');
+            showToast(editId ? 'Preço atualizado!' : 'Preço salvo!');
             
-            // RESET FIELDS EXCEPT MARKET
-            setVal('price-id', '');
-            setVal('price-category', '');
-            setVal('price-barcode', '');
-            setVal('price-product-display', '');
+            // Reset parcial
+            const priceIdInput = document.getElementById('price-id') as HTMLInputElement;
+            if (priceIdInput) {
+                priceIdInput.value = "";
+                priceIdInput.removeAttribute('data-editing');
+            }
             setVal('price-price', '');
+            const saveBtn = document.getElementById('btn-save-price') as HTMLButtonElement;
+            if (saveBtn) saveBtn.textContent = "Salvar Registro";
             
-            renderAdminPrices();
-        } catch(err) {
-            showToast("Erro ao salvar preço");
-        }
+            (window as any).filterPriceList();
+        } catch(err) { showToast("Erro ao salvar"); }
     };
 };
 
@@ -576,7 +633,7 @@ setupForm('form-category', 'categories', ['category-name'], renderAdminCategorie
 setupForm('form-product', 'products', ['product-name', 'product-category', 'product-barcode'], renderAdminProducts);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
 
-// --- EDIT HANDLERS ---
+// --- HANDLERS DE EDIÇÃO ---
 (window as any).editCity = (id: any) => db.query('cities', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
     if (x) { setVal('city-id', x.id); setVal('input-city-name', x.name); setVal('input-city-state', x.state); } 
@@ -597,30 +654,51 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     const prices = await db.query('prices', 'SELECT'); 
     const p = prices.find(i => i.id == id); 
     if (p) { 
-        setVal('price-id', p.id); 
+        const idInput = document.getElementById('price-id') as HTMLInputElement;
+        if (idInput) {
+            idInput.value = p.id;
+            idInput.setAttribute('data-editing', 'true');
+        }
         setVal('price-market', p.market); 
         setVal('price-category', p.category || ''); 
-        
-        // Find product to fill barcode (optional lookup for UX)
-        const products = await db.query('products', 'SELECT');
-        const product = products.find(prod => prod.name === p.product);
-        
-        setVal('price-barcode', product ? product.barcode : '');
         setVal('price-product-display', p.product);
         setVal('price-price', p.price); 
         
+        const saveBtn = document.getElementById('btn-save-price') as HTMLButtonElement;
+        if (saveBtn) saveBtn.textContent = "ATUALIZAR";
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } 
 };
+
+// --- FUNÇÃO DE EXCLUSÃO CORRIGIDA ---
 (window as any).deletePrice = async (id: any) => {
-    if (confirm('Deseja realmente excluir este registro de preço?')) {
+    console.log("[Delete] Solicitando exclusão do ID:", id);
+    if (!id || id === 'undefined' || id === 'null') {
+        showToast("ID inválido para exclusão.");
+        return;
+    }
+    
+    if (confirm('Tem certeza que deseja excluir este registro de preço permanentemente?')) {
         try {
+            showToast("Excluindo...");
+            
+            // Chamar diretamente para garantir a execução
             await db.query('prices', 'DELETE', id);
-            showToast('Preço excluído');
-            renderAdminPrices();
-        } catch(e) { showToast("Erro ao excluir preço"); }
+            
+            showToast('Registro excluído!');
+            
+            // Recarregar a lista filtrada
+            const m = (document.getElementById('price-market') as HTMLSelectElement)?.value || "";
+            const p = (document.getElementById('price-product-display') as HTMLInputElement)?.value || "";
+            renderAdminPrices(m, p);
+            
+        } catch(e: any) { 
+            console.error("[Delete Price Error]", e);
+            alert("Erro ao excluir do banco de dados: " + (e.message || "Verifique sua conexão ou permissões."));
+        }
     }
 };
+
 (window as any).editUser = (id: any) => db.query('users', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
     if (x) { setVal('user-admin-id', x.id); setVal('user-admin-name', x.name); setVal('user-admin-email', x.email || ''); setVal('user-admin-city', x.city || ''); setVal('user-admin-password', x.password); } 
