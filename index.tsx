@@ -600,13 +600,17 @@ const setupPriceForm = () => {
             
             showToast(editId ? 'Preço atualizado!' : 'Preço salvo!');
             
-            // Reset parcial
+            // Reset parcial corrigido: limpa campos de produto/valor, mantém mercado
             const priceIdInput = document.getElementById('price-id') as HTMLInputElement;
             if (priceIdInput) {
                 priceIdInput.value = "";
                 priceIdInput.removeAttribute('data-editing');
             }
+            setVal('price-barcode', '');
+            setVal('price-product-display', '');
             setVal('price-price', '');
+            setVal('price-category', '');
+            
             const saveBtn = document.getElementById('btn-save-price') as HTMLButtonElement;
             if (saveBtn) saveBtn.textContent = "Salvar Registro";
             
