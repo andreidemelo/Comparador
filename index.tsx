@@ -563,7 +563,7 @@ async function renderAdminProducts() {
             <td class="p-6 text-slate-500">${p.category}</td> 
             <td class="p-6 text-slate-500">${p.barcode || '-'}</td> 
             <td class="p-6 text-right">
-                <div class="flex justify-end gap-3">
+                <div class="flex flex-col items-end gap-2">
                     <button onclick="editProduct('${p.id}')" class="text-blue-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Editar</button>
                     <button onclick="deleteProduct('${p.id}')" class="text-red-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Excluir</button>
                 </div>
