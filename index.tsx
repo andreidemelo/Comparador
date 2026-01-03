@@ -10,6 +10,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
  *    product text not null,
  *    price numeric not null,
  *    category text,
+ *    updated_at timestamp with time zone default now(),
  *    created_at timestamp with time zone default now()
  * );
  * 
@@ -658,7 +659,13 @@ const setupPriceForm = () => {
             category = products.find(p => p.name === productName)?.category || "Geral";
         }
 
-        const data = { market, product: productName, price: priceVal, category };
+        const data = { 
+            market, 
+            product: productName, 
+            price: priceVal, 
+            category,
+            updated_at: new Date().toISOString() // Data de registro ou atualização
+        };
 
         try {
             if (editId) await db.query('prices', 'UPDATE', { id: editId, data });
