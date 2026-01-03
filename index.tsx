@@ -159,7 +159,12 @@ const stopScanner = async () => {
 // Verificação de duplicidade no formulário de cadastro de produto
 (window as any).checkBarcodeOnProductForm = async (barcode: string) => {
     const barcodeTrimmed = barcode.trim();
-    if (!barcodeTrimmed) return;
+    const btnSubmit = document.querySelector('#form-product button[type="submit"]') as HTMLButtonElement;
+    
+    if (!barcodeTrimmed) {
+        if (btnSubmit) btnSubmit.textContent = "Salvar Produto";
+        return;
+    }
 
     try {
         const products = await db.query('products', 'SELECT');
@@ -167,9 +172,18 @@ const stopScanner = async () => {
         
         if (existing) {
             alert("Este item já está cadastrado!");
-            // Resetar todos os campos do formulário de produto
-            const form = document.getElementById('form-product') as HTMLFormElement;
-            if (form) form.reset();
+            // Preencher os campos para edição
+            setVal('product-id', existing.id);
+            setVal('product-name', existing.name);
+            setVal('product-category', existing.category);
+            // Alterar o texto do botão
+            if (btnSubmit) btnSubmit.textContent = "Atualizar";
+        } else {
+            // Se não existe, limpa os campos de dados (exceto barcode) e garante que o botão diz "Salvar"
+            setVal('product-id', '');
+            setVal('product-name', '');
+            setVal('product-category', '');
+            if (btnSubmit) btnSubmit.textContent = "Salvar Produto";
         }
     } catch (e) {
         console.error("Erro ao verificar barcode no formulário de produtos:", e);
@@ -245,7 +259,10 @@ const checkExistingPrice = async () => {
                 // Preencher o campo de código de barras na tela de produtos automaticamente
                 setTimeout(() => {
                     const adminProductBarcode = document.getElementById('product-barcode') as HTMLInputElement;
-                    if (adminProductBarcode) adminProductBarcode.value = barcodeTrimmed;
+                    if (adminProductBarcode) {
+                        adminProductBarcode.value = barcodeTrimmed;
+                        (window as any).checkBarcodeOnProductForm(barcodeTrimmed);
+                    }
                 }, 200);
             } else {
                 // Resetar os campos solicitados
@@ -687,7 +704,15 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         });
         if (editId) await db.query(table, 'UPDATE', { id: editId, data });
         else await db.query(table, 'INSERT', data);
-        showToast('Sucesso!'); (e.target as HTMLFormElement).reset(); if (callback) callback();
+        showToast('Sucesso!'); (e.target as HTMLFormElement).reset(); 
+        
+        // Reset adicional para o botão do formulário de produto
+        if (id === 'form-product') {
+            const btnSubmit = f.querySelector('button[type="submit"]') as HTMLButtonElement;
+            if (btnSubmit) btnSubmit.textContent = "Salvar Produto";
+        }
+        
+        if (callback) callback();
     };
 };
 
@@ -712,7 +737,14 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
 });
 (window as any).editProduct = (id: any) => db.query('products', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
-    if (x) { setVal('product-id', x.id); setVal('product-category', x.category); setVal('product-name', x.name); setVal('product-barcode', x.barcode || ''); } 
+    if (x) { 
+        setVal('product-id', x.id); 
+        setVal('product-category', x.category); 
+        setVal('product-name', x.name); 
+        setVal('product-barcode', x.barcode || '');
+        const btnSubmit = document.querySelector('#form-product button[type="submit"]') as HTMLButtonElement;
+        if (btnSubmit) btnSubmit.textContent = "Atualizar";
+    } 
 });
 
 (window as any).deleteProduct = async (id: any) => {
