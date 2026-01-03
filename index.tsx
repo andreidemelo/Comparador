@@ -540,53 +540,67 @@ function updateListDisplay() {
                     Voltar para Montagem
                 </button>
             </div>
-            <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[10px] font-bold uppercase text-slate-400"><tr><th class="p-6 whitespace-nowrap">Lista</th>${markets.map(m => `<th class="p-6 text-center whitespace-nowrap">${m.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-50 text-sm">`;
+            <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[12px] font-bold uppercase text-slate-400"><tr><th class="p-4 whitespace-normal leading-tight">Lista</th><th class="p-4 text-center whitespace-normal leading-tight">Melhor<br>Preço</th>${markets.map((m, idx) => `<th class="p-4 text-center whitespace-normal leading-tight ${idx % 2 === 0 ? 'bg-slate-50/80' : ''}">${m.name}</th>`).join('')}</tr></thead><tbody class="text-sm">`;
         
         shoppingList.forEach(item => {
             // Encontrar o menor preço para este item específico entre todos os mercados
             let itemLines: number[] = [];
+            let itemUnitPrices: number[] = [];
             markets.forEach(m => {
                 const pObj = prices.find(p => p.market === m.name && p.product === item.name);
                 const p = pObj ? parseFloat(pObj.price) : 0;
-                if (p > 0) itemLines.push(p * item.quantity);
+                if (p > 0) {
+                    itemLines.push(p * item.quantity);
+                    itemUnitPrices.push(p);
+                }
             });
             const minLineForItem = itemLines.length > 0 ? Math.min(...itemLines) : -1;
+            const minUnitForItem = itemUnitPrices.length > 0 ? Math.min(...itemUnitPrices) : 0;
+            const bestPriceText = minUnitForItem > 0 ? `<span class="whitespace-nowrap">R$ ${formatPrice(minUnitForItem)}</span>` : "";
 
-            html += `<tr><td class="p-6 font-medium text-slate-600 whitespace-nowrap"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
-            markets.forEach(m => {
+            html += `<tr class="border-b border-slate-100 transition-colors even:bg-slate-50/50 hover:bg-slate-50"><td class="p-4 font-medium text-slate-600 whitespace-normal"><div class="flex flex-col leading-tight"><span class="font-bold text-slate-900">${item.name}</span><span class="text-[10px] text-slate-400">Qtd: ${item.quantity}</span></div></td><td class="p-4 text-center font-bold text-slate-500 whitespace-nowrap">${bestPriceText}</td>`;
+            markets.forEach((m, idx) => {
                 const pObj = prices.find(p => p.market === m.name && p.product === item.name);
                 const priceVal = pObj ? parseFloat(pObj.price) : 0;
+                const colBgClass = idx % 2 === 0 ? 'bg-slate-50/40' : '';
                 
                 if (pObj && priceVal > 0) {
                     const line = priceVal * item.quantity;
                     totals[m.name] += line;
                     const dateInfo = pObj.updated_at || pObj.created_at;
                     const isMinPrice = line === minLineForItem;
+                    const dateFormatted = formatDate(dateInfo).replace(' ', '<br>');
                     
-                    html += `<td class="p-6 text-center whitespace-nowrap">
+                    html += `<td class="p-4 text-center whitespace-normal ${colBgClass}">
                         <div class="flex flex-col items-center">
-                            <span class="font-bold inline-block ${isMinPrice ? 'bg-emerald-600 text-white px-3 py-1 rounded-lg' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
-                            <span class="text-[9px] text-slate-400 font-normal mt-0.5">${formatDate(dateInfo)}</span>
+                            <span class="font-bold whitespace-nowrap inline-block ${isMinPrice ? 'bg-emerald-600 text-white px-2 py-1 rounded-lg' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
+                            <span class="text-[8px] text-slate-400 font-normal mt-1 leading-none text-center">${dateFormatted}</span>
                         </div>
                     </td>`;
                 } else {
-                    html += `<td class="p-6 text-center whitespace-nowrap"></td>`;
+                    html += `<td class="p-4 text-center whitespace-nowrap ${colBgClass}"></td>`;
                 }
             });
             html += `</tr>`;
         });
         
-        const valid = Object.values(totals).filter((v: any) => v > 0);
-        const min = valid.length ? Math.min(...(valid as number[])) : 0;
-        html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8 whitespace-nowrap">TOTAL</td>`;
-        markets.forEach(m => {
+        // Cálculo da economia total
+        const validTotals = Object.values(totals).filter((v: any) => v > 0) as number[];
+        const sumTotals = validTotals.reduce((a, b) => a + b, 0);
+        const avgTotal = validTotals.length > 0 ? sumTotals / validTotals.length : 0;
+        const minTotal = validTotals.length > 0 ? Math.min(...validTotals) : 0;
+        const economyValue = avgTotal - minTotal;
+
+        html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-6 whitespace-normal" colspan="2">ECONOMIA TOTAL:<br><span class="whitespace-nowrap">R$ ${formatPrice(economyValue > 0 ? economyValue : 0)}</span></td>`;
+        markets.forEach((m, idx) => {
             const currentTotal = totals[m.name];
-            const isBest = currentTotal > 0 && currentTotal === min;
+            const isBest = currentTotal > 0 && currentTotal === minTotal;
+            const colBgClass = idx % 2 === 0 ? 'bg-slate-800/50' : '';
             
             if (currentTotal > 0) {
-                html += `<td class="p-8 text-center whitespace-nowrap ${isBest ? 'bg-emerald-600' : ''}">R$ ${formatPrice(currentTotal)} ${isBest ? '🏆' : ''}</td>`;
+                html += `<td class="p-6 text-center whitespace-nowrap ${isBest ? 'bg-emerald-600' : colBgClass}"><span class="whitespace-nowrap">R$ ${formatPrice(currentTotal)}</span> ${isBest ? '🏆' : ''}</td>`;
             } else {
-                html += `<td class="p-8 text-center whitespace-nowrap"></td>`;
+                html += `<td class="p-6 text-center whitespace-nowrap ${colBgClass}"></td>`;
             }
         });
         html += `</tr></tbody></table></div></div>`;
