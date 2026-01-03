@@ -528,9 +528,19 @@ function updateListDisplay() {
             html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
             markets.forEach(m => {
                 const pObj = prices.find(p => p.market === m.name && p.product === item.name);
-                const line = (pObj ? parseFloat(pObj.price) : 0) * item.quantity;
-                totals[m.name] += line;
-                html += `<td class="p-6 text-center font-bold text-slate-800">R$ ${formatPrice(line)}</td>`;
+                if (pObj) {
+                    const line = parseFloat(pObj.price) * item.quantity;
+                    totals[m.name] += line;
+                    const dateInfo = pObj.updated_at || pObj.created_at;
+                    html += `<td class="p-6 text-center">
+                        <div class="flex flex-col items-center">
+                            <span class="font-bold text-slate-800">R$ ${formatPrice(line)}</span>
+                            <span class="text-[9px] text-slate-400 font-normal mt-0.5">${formatDate(dateInfo)}</span>
+                        </div>
+                    </td>`;
+                } else {
+                    html += `<td class="p-6 text-center"></td>`;
+                }
             });
             html += `</tr>`;
         });
