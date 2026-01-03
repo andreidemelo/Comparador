@@ -89,6 +89,7 @@ const db = new Database();
 let currentUser: any = null;
 let shoppingList: { name: string, quantity: number }[] = [];
 let currentListId: any = null; 
+let itemBeingEdited: string | null = null;
 let html5QrCode: any = null;
 
 // --- AUXILIARES ---
@@ -437,6 +438,9 @@ async function renderSavedLists() {
 function loadHome() {
     currentListId = null;
     shoppingList = [];
+    itemBeingEdited = null;
+    const btn = document.getElementById('btn-add-item');
+    if (btn) btn.textContent = "Adicionar";
     const res = document.getElementById('comparison-results');
     if (res) res.classList.add('hidden');
     document.getElementById('build-list-header')?.classList.remove('hidden');
@@ -452,15 +456,53 @@ function loadBuildList() {
     document.getElementById('comparison-results')?.classList.add('hidden');
 }
 
-(window as any).addItem = () => {
+(window as any).addItem = async () => {
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;
+    const btn = document.getElementById('btn-add-item');
+    
     if (!pSel || pSel.disabled || !pSel.value) return;
-    const existing = shoppingList.find(i => i.name === pSel.value);
+    const prodName = pSel.value;
     const qty = parseInt(qIn?.value || "1") || 1;
-    if (existing) existing.quantity += qty;
-    else shoppingList.push({ name: pSel.value, quantity: qty });
+
+    if (itemBeingEdited) {
+        // Modo Atualizar
+        const idx = shoppingList.findIndex(i => i.name === itemBeingEdited);
+        if (idx !== -1) {
+            // Se o produto mudou, remove o antigo e insere o novo (tratando duplicatas se necessário)
+            if (prodName !== itemBeingEdited) {
+                shoppingList.splice(idx, 1);
+                const existing = shoppingList.find(i => i.name === prodName);
+                if (existing) existing.quantity += qty;
+                else shoppingList.push({ name: prodName, quantity: qty });
+            } else {
+                shoppingList[idx].quantity = qty;
+            }
+        }
+        itemBeingEdited = null;
+        if (btn) btn.textContent = "Adicionar";
+        
+        // Salva automaticamente se a lista já estiver nomeada
+        const nameInput = document.getElementById('input-list-name') as HTMLInputElement;
+        if (nameInput?.value.trim()) {
+            await (window as any).saveList(true);
+        }
+        showToast("Item atualizado");
+    } else {
+        // Modo Adicionar Padrão
+        const existing = shoppingList.find(i => i.name === prodName);
+        if (existing) existing.quantity += qty;
+        else shoppingList.push({ name: prodName, quantity: qty });
+    }
+
+    // Reset de campos
     if (qIn) qIn.value = "1";
+    setVal('select-category', '');
+    if (pSel) {
+        pSel.innerHTML = '<option value="">Selecionar...</option>';
+        pSel.disabled = true;
+    }
+    
     updateListDisplay();
 };
 
@@ -492,28 +534,45 @@ function updateListDisplay() {
             await (window as any).onCategoryChangeHome();
             setVal('select-product', name);
             setVal('select-quantity', item.quantity);
-            shoppingList = shoppingList.filter(i => i.name !== name);
-            updateListDisplay();
-            showToast("Item para edição");
+            
+            // Ativa modo edição visual
+            itemBeingEdited = name;
+            const btn = document.getElementById('btn-add-item');
+            if (btn) btn.textContent = "Atualizar";
+            
+            showToast("Editando: " + name);
         }
     } catch (e) { console.error(e); }
 };
 
 (window as any).removeItem = (name: string) => {
     shoppingList = shoppingList.filter(i => i.name !== name);
+    if (itemBeingEdited === name) {
+        itemBeingEdited = null;
+        const btn = document.getElementById('btn-add-item');
+        if (btn) btn.textContent = "Adicionar";
+    }
     updateListDisplay();
 };
 
-(window as any).saveList = async () => {
+(window as any).saveList = async (silent = false) => {
     const nameInput = document.getElementById('input-list-name') as HTMLInputElement;
-    if (!nameInput?.value.trim()) return showToast('Dê um nome para a lista');
-    if (!shoppingList.length) return showToast('Lista vazia');
+    if (!nameInput?.value.trim()) return silent ? null : showToast('Dê um nome para a lista');
+    if (!shoppingList.length) return silent ? null : showToast('Lista vazia');
     const data = { user_id: currentUser.id, name: nameInput.value, items: JSON.stringify(shoppingList), created_at: new Date().toISOString() };
     try {
-        if (currentListId) await db.query('saved_lists', 'UPDATE', { id: currentListId, data });
-        else await db.query('saved_lists', 'INSERT', data);
-        showToast('Lista Salva!');
-        showView('home');
+        if (currentListId) {
+            await db.query('saved_lists', 'UPDATE', { id: currentListId, data });
+        } else {
+            const res = await db.query('saved_lists', 'INSERT', data);
+            if (res && res[0]) currentListId = res[0].id;
+        }
+        if (silent) {
+            showToast('Sincronizado...');
+        } else {
+            showToast('Lista Salva!');
+            showView('home');
+        }
     } catch(e) { console.error(e); }
 };
 
@@ -641,7 +700,16 @@ async function renderAdminMarkets() {
 async function renderAdminCategories() {
     const cats = await db.query('categories', 'SELECT');
     const body = document.getElementById('table-categories-body');
-    if (body) body.innerHTML = cats.map(c => `<tr class="border-b"> <td class="p-6 font-bold">${c.name}</td> <td class="p-6 text-right"><button onclick="editCategory('${c.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = cats.map(c => `
+        <tr class="border-b hover:bg-slate-50 transition-colors"> 
+            <td class="p-6 font-bold text-slate-800">${c.name}</td> 
+            <td class="p-6 text-right">
+                <div class="flex flex-col items-end gap-2">
+                    <button onclick="editCategory('${c.id}')" class="text-blue-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Editar</button>
+                    <button onclick="deleteCategory('${c.id}')" class="text-red-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Excluir</button>
+                </div>
+            </td> 
+        </tr>`).join('');
 }
 async function renderAdminProducts() {
     populateDropdown('product-category', 'categories');
@@ -710,7 +778,7 @@ async function populateDropdown(id: string, table: string) {
     pSel.disabled = !cat;
     if (cat) {
         const prods = await db.query('products', 'SELECT');
-        pSel.innerHTML = prods.filter(p => p.category === cat).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+        pSel.innerHTML = '<option value="">Selecionar...</option>' + prods.filter(p => p.category === cat).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
     }
 };
 
@@ -785,10 +853,10 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
         else await db.query(table, 'INSERT', data);
         showToast('Sucesso!'); (e.target as HTMLFormElement).reset(); 
         
-        // Reset adicional para o botão do formulário de produto
-        if (id === 'form-product') {
+        // Reset adicional para o botão do formulário de produto/categoria
+        if (id === 'form-product' || id === 'form-category') {
             const btnSubmit = f.querySelector('button[type="submit"]') as HTMLButtonElement;
-            if (btnSubmit) btnSubmit.textContent = "Salvar Produto";
+            if (btnSubmit) btnSubmit.textContent = "Salvar";
         }
         
         if (callback) callback();
@@ -812,8 +880,27 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
 });
 (window as any).editCategory = (id: any) => db.query('categories', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
-    if (x) { setVal('category-id', x.id); setVal('category-name', x.name); } 
+    if (x) { 
+        setVal('category-id', x.id); 
+        setVal('category-name', x.name); 
+        const btnSubmit = document.querySelector('#form-category button[type="submit"]') as HTMLButtonElement;
+        if (btnSubmit) btnSubmit.textContent = "ATUALIZAR";
+    } 
 });
+
+(window as any).deleteCategory = async (id: any) => {
+    if (confirm('Tem certeza que deseja excluir esta categoria? Isso pode afetar produtos e preços vinculados.')) {
+        try {
+            await db.query('categories', 'DELETE', id);
+            showToast('Categoria excluída!');
+            renderAdminCategories();
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao excluir categoria");
+        }
+    }
+};
+
 (window as any).editProduct = (id: any) => db.query('products', 'SELECT').then(data => { 
     const x = data.find(i => i.id == id); 
     if (x) { 

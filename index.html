@@ -199,7 +199,7 @@
                 <div class="grid grid-cols-1 gap-6 w-full max-w-lg">
                     <button onclick="showView('saved-lists')" class="dashboard-btn bg-white p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
                         <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                         </div>
                         <span class="font-bold text-slate-700 text-lg">Minhas Listas de Compras</span>
                     </button>
@@ -269,7 +269,7 @@
                             <select id="select-category" onchange="onCategoryChangeHome()" class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm appearance-none"></select>
                             <select id="select-product" disabled class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm appearance-none"></select>
                             <input type="number" id="select-quantity" value="1" min="1" class="w-full p-4 input-minimal rounded-2xl outline-none font-bold text-sm">
-                            <button onclick="addItem()" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest">Adicionar</button>
+                            <button id="btn-add-item" onclick="addItem()" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest">Adicionar</button>
                         </div>
                         <div class="lg:col-span-2 space-y-8">
                             <div class="flex justify-between items-center px-4">
@@ -340,7 +340,7 @@
 
             <div id="view-admin-categories" class="hidden animate-in space-y-8">
                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Categoria</h3>
+                    <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">CADASTRO DE CATEGORIA</h3>
                     <form id="form-category" class="grid grid-cols-1 gap-4">
                         <input type="hidden" id="category-id">
                         <input type="text" id="category-name" placeholder="Nome da Categoria" class="p-4 input-minimal rounded-2xl outline-none text-sm font-medium" required>
@@ -397,7 +397,7 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Identificar Produto (Opcional)</label>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">CÓDIGO DE BARRAS</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="price-barcode" oninput="lookupBarcodeForPrice(this.value)" placeholder="Código de barras..." class="flex-1 p-5 input-minimal rounded-2xl outline-none text-sm font-bold">
                                     <button type="button" onclick="startScanner('price-barcode')" class="p-5 bg-emerald-50 text-green-brand rounded-2xl hover:bg-green-brand hover:text-white transition-all">
@@ -411,7 +411,7 @@
                             </div>
                         </div>
                         <div class="space-y-3">
-                            <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Valor do Item</label>
+                            <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">PREÇO</label>
                             <div class="relative">
                                 <span class="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">R$</span>
                                 <input type="number" step="0.01" id="price-price" placeholder="0,00" class="w-full p-5 pl-14 input-minimal rounded-2xl outline-none text-lg font-black text-green-brand" required>
