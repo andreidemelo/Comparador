@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -50,17 +49,18 @@
             box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.2);
         }
 
-        /* Estilo PagaMenos - Proporções Ajustadas */
+        /* Estilo PagaMenos - Design Responsivo e Centralizado */
         .valebem-title {
             font-family: 'Inter', system-ui, sans-serif;
-            font-size: 55px;
+            font-size: clamp(2.4rem, 10vw, 3.8rem); 
             font-weight: 800;
             letter-spacing: -0.06em;
-            line-height: 0.9;
+            line-height: 0.85;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 4px; 
+            margin-bottom: 0.1em; 
+            white-space: nowrap;
         }
 
         .text-green-brand { color: #01623B; }
@@ -68,12 +68,16 @@
 
         .valebem-slogan {
             font-family: 'Caveat', cursive;
-            font-size: 1.9rem;
+            /* Ajustado o valor mínimo de 1.2rem para 0.85rem para melhor proporção em mobile */
+            font-size: clamp(0.85rem, 5vw, 2rem); 
             color: #475569; 
-            margin-top: -4px; 
+            margin-top: -0.15em; 
             text-transform: none;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.01em;
             font-weight: 500;
+            line-height: 1.1;
+            padding: 0 1rem; 
+            max-width: 100%;
         }
 
         .dashboard-btn {
@@ -87,11 +91,11 @@
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
         }
 
-        /* Logo Scale & Proportion */
+        /* Logo Prisma - Proporções Dinâmicas */
         .valebem-logo-container {
-            width: 125px;
-            height: 125px;
-            margin-bottom: 8px; 
+            width: clamp(100px, 28vw, 150px); 
+            height: clamp(100px, 28vw, 150px);
+            margin-bottom: 0.5rem; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -110,7 +114,7 @@
         <div class="w-full max-w-sm flex flex-col items-center animate-in">
             
             <!-- BRANDING LOCKUP - INNOVATIVE PRISM LOGO -->
-            <div class="flex flex-col items-center text-center mb-6">
+            <div class="flex flex-col items-center text-center mb-6 w-full">
                 <div class="valebem-logo-container">
                     <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M42 25L25 42C23 44 23 47 25 49L42 66" stroke="#01623B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
@@ -153,8 +157,6 @@
     <div id="main-app" class="hidden">
         <header class="bg-white border-b border-slate-100 p-4 md:p-6 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
-                
-                <!-- CABEÇALHO COM LOGO MINI -->
                 <div class="flex items-center gap-4 cursor-pointer group" onclick="showView('home')">
                     <div class="relative flex items-center justify-center w-10 h-10 bg-green-brand text-white rounded-xl transition-all group-hover:scale-110">
                         <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -187,7 +189,6 @@
         </header>
 
         <main class="max-w-7xl mx-auto p-4 md:p-8">
-            <!-- HOME VIEW (DASHBOARD) -->
             <div id="view-home" class="animate-in space-y-8 flex flex-col items-center pt-8">
                 <div class="grid grid-cols-1 gap-6 w-full max-w-lg">
                     <button onclick="showView('saved-lists')" class="dashboard-btn bg-white p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
@@ -269,7 +270,6 @@
                 </div>
             </div>
 
-            <!-- ADMIN VIEWS -->
             <div id="view-admin-menu" class="hidden animate-in space-y-12 text-center">
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
                     <button onclick="showView('admin-users')" class="p-8 bg-white rounded-3xl border border-slate-100 hover:border-green-brand transition-all flex flex-col items-center gap-4 text-xs font-bold">Usuários</button>
@@ -387,7 +387,6 @@
                 </div>
                 <div class="overflow-x-auto mt-12"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div>
             </div>
-
         </main>
     </div>
 
