@@ -543,6 +543,15 @@ function updateListDisplay() {
             <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[10px] font-bold uppercase text-slate-400"><tr><th class="p-6">Lista</th>${markets.map(m => `<th class="p-6 text-center">${m.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-50 text-sm">`;
         
         shoppingList.forEach(item => {
+            // Encontrar o menor preço para este item específico entre todos os mercados
+            let itemLines: number[] = [];
+            markets.forEach(m => {
+                const pObj = prices.find(p => p.market === m.name && p.product === item.name);
+                const p = pObj ? parseFloat(pObj.price) : 0;
+                if (p > 0) itemLines.push(p * item.quantity);
+            });
+            const minLineForItem = itemLines.length > 0 ? Math.min(...itemLines) : -1;
+
             html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
             markets.forEach(m => {
                 const pObj = prices.find(p => p.market === m.name && p.product === item.name);
@@ -552,9 +561,11 @@ function updateListDisplay() {
                     const line = priceVal * item.quantity;
                     totals[m.name] += line;
                     const dateInfo = pObj.updated_at || pObj.created_at;
+                    const isMinPrice = line === minLineForItem;
+                    
                     html += `<td class="p-6 text-center">
                         <div class="flex flex-col items-center">
-                            <span class="font-bold text-slate-800">R$ ${formatPrice(line)}</span>
+                            <span class="font-bold ${isMinPrice ? 'text-emerald-600 font-black' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
                             <span class="text-[9px] text-slate-400 font-normal mt-0.5">${formatDate(dateInfo)}</span>
                         </div>
                     </td>`;
