@@ -193,6 +193,8 @@ const checkExistingPrice = async () => {
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
     const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    const barcodeInput = document.getElementById('price-barcode') as HTMLInputElement;
+    const priceInput = document.getElementById('price-price') as HTMLInputElement;
     const barcodeTrimmed = barcode.trim();
     
     if (!barcodeTrimmed) { 
@@ -211,14 +213,29 @@ const checkExistingPrice = async () => {
             if (displayInput) displayInput.value = product.name;
             if (categoryHidden) categoryHidden.value = product.category;
             showToast(`Identificado: ${product.name}`);
+            // Atualiza a visualização e checa se já tem preço cadastrado para esse produto no mercado selecionado
+            (window as any).filterPriceList();
+            await checkExistingPrice();
         } else {
-            // Se não encontrar, mantemos o campo livre para o usuário digitar mas limpamos a categoria técnica
-            if (categoryHidden) categoryHidden.value = "Geral";
+            // Se não encontrar o item no banco de dados
+            if (confirm("Item não encontrado no banco de dados. Deseja cadastrar este novo item agora?")) {
+                // Direcionar para o cadastro de produtos
+                showView('admin-products');
+                // Preencher o campo de código de barras na tela de produtos automaticamente
+                setTimeout(() => {
+                    const adminProductBarcode = document.getElementById('product-barcode') as HTMLInputElement;
+                    if (adminProductBarcode) adminProductBarcode.value = barcodeTrimmed;
+                }, 200);
+            } else {
+                // Resetar os campos solicitados
+                if (barcodeInput) barcodeInput.value = "";
+                if (displayInput) displayInput.value = "";
+                if (priceInput) priceInput.value = "";
+                if (categoryHidden) categoryHidden.value = "";
+                // Manter o supermercado (price-market) intacto
+                (window as any).filterPriceList();
+            }
         }
-        
-        // Atualiza a visualização e checa se já tem preço cadastrado para esse produto no mercado selecionado
-        (window as any).filterPriceList();
-        await checkExistingPrice();
     } catch (e) {
         console.error("Erro ao buscar produto por barcode:", e);
     }
