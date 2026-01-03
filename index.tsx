@@ -439,12 +439,17 @@ function loadHome() {
     shoppingList = [];
     const res = document.getElementById('comparison-results');
     if (res) res.classList.add('hidden');
+    document.getElementById('build-list-header')?.classList.remove('hidden');
+    document.getElementById('build-list-main-content')?.classList.remove('hidden');
 }
 
 function loadBuildList() {
     populateDropdown('select-category', 'categories');
     updateListDisplay();
     if (!currentListId) setVal('input-list-name', '');
+    document.getElementById('build-list-header')?.classList.remove('hidden');
+    document.getElementById('build-list-main-content')?.classList.remove('hidden');
+    document.getElementById('comparison-results')?.classList.add('hidden');
 }
 
 (window as any).addItem = () => {
@@ -516,14 +521,27 @@ function updateListDisplay() {
 (window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
     if (!res) return;
+    
     try {
         const markets = await db.query('markets', 'SELECT');
         const prices = await db.query('prices', 'SELECT');
         let totals: any = {};
         markets.forEach(m => totals[m.name] = 0);
+        
+        // Ocultar elementos de edição para mostrar "somente o painel"
+        document.getElementById('build-list-header')?.classList.add('hidden');
+        document.getElementById('build-list-main-content')?.classList.add('hidden');
+
         let html = `<div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden animate-in">
-            <div class="p-8 bg-slate-50 border-b"><h3 class="font-extrabold text-slate-900 uppercase text-sm">Painel Comparativo</h3></div>
+            <div class="p-8 bg-slate-50 border-b flex justify-between items-center">
+                <h3 class="font-extrabold text-slate-900 uppercase text-sm">Painel Comparativo</h3>
+                <button onclick="backToEditList()" class="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    Voltar para Montagem
+                </button>
+            </div>
             <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[10px] font-bold uppercase text-slate-400"><tr><th class="p-6">Lista</th>${markets.map(m => `<th class="p-6 text-center">${m.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-50 text-sm">`;
+        
         shoppingList.forEach(item => {
             html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
             markets.forEach(m => {
@@ -544,6 +562,7 @@ function updateListDisplay() {
             });
             html += `</tr>`;
         });
+        
         const valid = Object.values(totals).filter((v: any) => v > 0);
         const min = valid.length ? Math.min(...(valid as number[])) : 0;
         html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8">TOTAL</td>`;
@@ -552,10 +571,20 @@ function updateListDisplay() {
             html += `<td class="p-8 text-center ${isBest ? 'bg-emerald-600' : ''}">R$ ${formatPrice(totals[m.name])} ${isBest ? '🏆' : ''}</td>`;
         });
         html += `</tr></tbody></table></div></div>`;
+        
         res.innerHTML = html; 
         res.classList.remove('hidden'); 
         res.scrollIntoView({ behavior: 'smooth' });
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        showToast("Erro ao gerar comparação");
+    }
+};
+
+(window as any).backToEditList = () => {
+    document.getElementById('build-list-header')?.classList.remove('hidden');
+    document.getElementById('build-list-main-content')?.classList.remove('hidden');
+    document.getElementById('comparison-results')?.classList.add('hidden');
 };
 
 // --- ADMIN ---
