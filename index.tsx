@@ -557,7 +557,18 @@ async function renderAdminProducts() {
     populateDropdown('product-category', 'categories');
     const prods = await db.query('products', 'SELECT');
     const body = document.getElementById('table-products-body');
-    if (body) body.innerHTML = prods.map(p => `<tr class="border-b"> <td class="p-6 font-bold">${p.name}</td> <td class="p-6">${p.category}</td> <td class="p-6">${p.barcode || '-'}</td> <td class="p-6 text-right"><button onclick="editProduct('${p.id}')" class="text-emerald-600 font-bold text-[10px]">Editar</button></td> </tr>`).join('');
+    if (body) body.innerHTML = prods.map(p => `
+        <tr class="border-b hover:bg-slate-50 transition-colors"> 
+            <td class="p-6 font-bold text-slate-800">${p.name}</td> 
+            <td class="p-6 text-slate-500">${p.category}</td> 
+            <td class="p-6 text-slate-500">${p.barcode || '-'}</td> 
+            <td class="p-6 text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick="editProduct('${p.id}')" class="text-blue-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Editar</button>
+                    <button onclick="deleteProduct('${p.id}')" class="text-red-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Excluir</button>
+                </div>
+            </td> 
+        </tr>`).join('');
 }
 
 (window as any).filterPriceList = () => {
@@ -703,6 +714,20 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     const x = data.find(i => i.id == id); 
     if (x) { setVal('product-id', x.id); setVal('product-category', x.category); setVal('product-name', x.name); setVal('product-barcode', x.barcode || ''); } 
 });
+
+(window as any).deleteProduct = async (id: any) => {
+    if (confirm('Tem certeza que deseja excluir este produto? Isso também pode afetar registros de preços vinculados.')) {
+        try {
+            await db.query('products', 'DELETE', id);
+            showToast('Produto excluído!');
+            renderAdminProducts();
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao excluir produto");
+        }
+    }
+};
+
 (window as any).editPrice = async (id: any) => { 
     const prices = await db.query('prices', 'SELECT'); 
     const p = prices.find(i => i.id == id); 
