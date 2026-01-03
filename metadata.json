@@ -1,5 +1,5 @@
 {
-  "name": "SuperCompare - Supabase Cloud",
+  "name": "PagaMenos - Supabase Cloud",
   "description": "App de comparação de preços sincronizado em tempo real utilizando Supabase Cloud como backend relacional.",
   "requestFramePermissions": [
     "geolocation",
