@@ -130,6 +130,7 @@ const startScanner = async (targetId: string = 'product-barcode') => {
                 showToast("Código Identificado");
                 if (targetId === 'quick-search-barcode') (window as any).lookupBarcode(decodedText);
                 if (targetId === 'price-barcode') (window as any).lookupBarcodeForPrice(decodedText);
+                if (targetId === 'product-barcode') (window as any).checkBarcodeOnProductForm(decodedText);
                 stopScanner();
             }
         }, () => {});
@@ -153,6 +154,26 @@ const stopScanner = async () => {
     const products = await db.query('products', 'SELECT');
     const product = products.find(p => p.barcode?.toString().trim() === barcode.trim());
     if (nameInput) nameInput.value = product ? product.name : "Produto não encontrado";
+};
+
+// Verificação de duplicidade no formulário de cadastro de produto
+(window as any).checkBarcodeOnProductForm = async (barcode: string) => {
+    const barcodeTrimmed = barcode.trim();
+    if (!barcodeTrimmed) return;
+
+    try {
+        const products = await db.query('products', 'SELECT');
+        const existing = products.find(p => p.barcode && p.barcode.toString().trim() === barcodeTrimmed);
+        
+        if (existing) {
+            alert("Este item já está cadastrado!");
+            // Resetar todos os campos do formulário de produto
+            const form = document.getElementById('form-product') as HTMLFormElement;
+            if (form) form.reset();
+        }
+    } catch (e) {
+        console.error("Erro ao verificar barcode no formulário de produtos:", e);
+    }
 };
 
 // Checar duplicatas ou existência de preço
@@ -662,7 +683,7 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
 setupForm('form-city', 'cities', ['input-city-name', 'input-city-state'], renderAdminCities);
 setupForm('form-market', 'markets', ['market-name', 'market-city', 'market-bairro'], renderAdminMarkets);
 setupForm('form-category', 'categories', ['category-name'], renderAdminCategories);
-setupForm('form-product', 'products', ['product-name', 'product-category', 'product-barcode'], renderAdminProducts);
+setupForm('form-product', 'products', ['product-barcode', 'product-name', 'product-category'], renderAdminProducts);
 setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'user-admin-city', 'user-admin-password'], renderAdminUsers);
 
 // --- HANDLERS DE EDIÇÃO ---
