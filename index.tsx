@@ -565,7 +565,7 @@ function updateListDisplay() {
                     
                     html += `<td class="p-6 text-center">
                         <div class="flex flex-col items-center">
-                            <span class="font-bold ${isMinPrice ? 'text-emerald-600 font-black' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
+                            <span class="font-bold inline-block ${isMinPrice ? 'bg-emerald-600 text-white px-3 py-1 rounded-lg' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
                             <span class="text-[9px] text-slate-400 font-normal mt-0.5">${formatDate(dateInfo)}</span>
                         </div>
                     </td>`;
