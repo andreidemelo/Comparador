@@ -540,7 +540,7 @@ function updateListDisplay() {
                     Voltar para Montagem
                 </button>
             </div>
-            <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[10px] font-bold uppercase text-slate-400"><tr><th class="p-6">Lista</th>${markets.map(m => `<th class="p-6 text-center">${m.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-50 text-sm">`;
+            <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[10px] font-bold uppercase text-slate-400"><tr><th class="p-6 whitespace-nowrap">Lista</th>${markets.map(m => `<th class="p-6 text-center whitespace-nowrap">${m.name}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-50 text-sm">`;
         
         shoppingList.forEach(item => {
             // Encontrar o menor preço para este item específico entre todos os mercados
@@ -552,7 +552,7 @@ function updateListDisplay() {
             });
             const minLineForItem = itemLines.length > 0 ? Math.min(...itemLines) : -1;
 
-            html += `<tr><td class="p-6 font-medium text-slate-600"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
+            html += `<tr><td class="p-6 font-medium text-slate-600 whitespace-nowrap"><span class="font-bold text-slate-900">${item.name}</span> (x${item.quantity})</td>`;
             markets.forEach(m => {
                 const pObj = prices.find(p => p.market === m.name && p.product === item.name);
                 const priceVal = pObj ? parseFloat(pObj.price) : 0;
@@ -563,14 +563,14 @@ function updateListDisplay() {
                     const dateInfo = pObj.updated_at || pObj.created_at;
                     const isMinPrice = line === minLineForItem;
                     
-                    html += `<td class="p-6 text-center">
+                    html += `<td class="p-6 text-center whitespace-nowrap">
                         <div class="flex flex-col items-center">
                             <span class="font-bold inline-block ${isMinPrice ? 'bg-emerald-600 text-white px-3 py-1 rounded-lg' : 'text-slate-800'}">R$ ${formatPrice(line)}</span>
                             <span class="text-[9px] text-slate-400 font-normal mt-0.5">${formatDate(dateInfo)}</span>
                         </div>
                     </td>`;
                 } else {
-                    html += `<td class="p-6 text-center"></td>`;
+                    html += `<td class="p-6 text-center whitespace-nowrap"></td>`;
                 }
             });
             html += `</tr>`;
@@ -578,15 +578,15 @@ function updateListDisplay() {
         
         const valid = Object.values(totals).filter((v: any) => v > 0);
         const min = valid.length ? Math.min(...(valid as number[])) : 0;
-        html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8">TOTAL</td>`;
+        html += `<tr class="bg-slate-900 text-white font-bold"><td class="p-8 whitespace-nowrap">TOTAL</td>`;
         markets.forEach(m => {
             const currentTotal = totals[m.name];
             const isBest = currentTotal > 0 && currentTotal === min;
             
             if (currentTotal > 0) {
-                html += `<td class="p-8 text-center ${isBest ? 'bg-emerald-600' : ''}">R$ ${formatPrice(currentTotal)} ${isBest ? '🏆' : ''}</td>`;
+                html += `<td class="p-8 text-center whitespace-nowrap ${isBest ? 'bg-emerald-600' : ''}">R$ ${formatPrice(currentTotal)} ${isBest ? '🏆' : ''}</td>`;
             } else {
-                html += `<td class="p-8 text-center"></td>`;
+                html += `<td class="p-8 text-center whitespace-nowrap"></td>`;
             }
         });
         html += `</tr></tbody></table></div></div>`;
