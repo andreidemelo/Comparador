@@ -32,7 +32,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 class Database {
     async query(table: string, action: 'SELECT' | 'INSERT' | 'DELETE' | 'UPDATE', params: any = null): Promise<any[]> {
-        console.log(`[Database] ${action} em ${table}`, params);
+        console.log(`[Database] Executando ${action} em ${table}`, params);
         try {
             if (action === 'SELECT') {
                 let query = supabase.from(table).select('*');
@@ -61,16 +61,17 @@ class Database {
             }
             
             if (action === 'DELETE') {
-                const idToDelete = Number(params);
-                if (isNaN(idToDelete)) throw new Error("ID de registro inválido para exclusão.");
+                if (!params) throw new Error("ID não fornecido.");
+                const idToDelete = isNaN(params) ? params : Number(params);
                 
                 const { error } = await supabase.from(table).delete().eq('id', idToDelete);
                 if (error) throw error;
+                console.log(`[Database] Sucesso ao excluir registro ${idToDelete} de ${table}`);
                 return [];
             }
             
             if (action === 'UPDATE') {
-                const idToUpdate = Number(params.id);
+                const idToUpdate = isNaN(params.id) ? params.id : Number(params.id);
                 const { data, error } = await supabase.from(table).update(params.data).eq('id', idToUpdate).select();
                 if (error) throw error;
                 return data || [];
@@ -158,7 +159,51 @@ const stopScanner = async () => {
     if (nameInput) nameInput.value = product ? product.name : "Produto não encontrado";
 };
 
-// Verificação de duplicidade no formulário de cadastro de produto
+// --- NOVA FUNCIONALIDADE: PESQUISA POR CATEGORIA ---
+(window as any).runCategorySearch = async () => {
+    const catSelect = document.getElementById('search-category-select') as HTMLSelectElement;
+    const cat = catSelect?.value;
+    if (!cat) return showToast("Selecione uma categoria");
+    
+    const res = document.getElementById('search-category-results');
+    if (!res) return;
+    res.classList.remove('hidden');
+    res.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 animate-pulse font-bold uppercase text-xs">Buscando melhores preços...</p></div>`;
+
+    try {
+        const prices = await db.query('prices', 'SELECT', { eq: ['category', cat] });
+        // Ordenar do menor para o maior preço
+        const sortedPrices = prices.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+        let html = `<div class="bg-white rounded-[2rem] border border-slate-100 p-8 space-y-4 animate-in text-left">
+            <h3 class="font-bold text-slate-800 border-b border-slate-50 pb-4">Melhores Preços em: ${cat}</h3>
+            <div class="space-y-3">`;
+
+        if (sortedPrices.length === 0) {
+            html += `<p class="text-sm text-slate-400 italic py-4">Nenhum preço cadastrado nesta categoria.</p>`;
+        } else {
+            sortedPrices.forEach(p => {
+                html += `
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-200 transition-all">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-black uppercase text-slate-400 tracking-wider">${p.market}</span>
+                        <span class="text-sm font-bold text-slate-700">${p.product}</span>
+                    </div>
+                    <div class="mt-2 md:mt-0 text-right">
+                        <span class="text-xl font-black text-emerald-600 leading-none">R$ ${formatPrice(p.price)}</span>
+                        <p class="text-[8px] text-slate-400 font-bold uppercase leading-none mt-1">${formatDate(p.updated_at || p.created_at)}</p>
+                    </div>
+                </div>`;
+            });
+        }
+        html += `</div></div>`;
+        res.innerHTML = html;
+    } catch(e) {
+        console.error(e);
+        showToast("Erro ao buscar preços");
+    }
+};
+
 (window as any).checkBarcodeOnProductForm = async (barcode: string) => {
     const barcodeTrimmed = barcode.trim();
     const btnSubmit = document.querySelector('#form-product button[type="submit"]') as HTMLButtonElement;
@@ -174,14 +219,11 @@ const stopScanner = async () => {
         
         if (existing) {
             alert("Este item já está cadastrado!");
-            // Preencher os campos para edição
             setVal('product-id', existing.id);
             setVal('product-name', existing.name);
             setVal('product-category', existing.category);
-            // Alterar o texto do botão
             if (btnSubmit) btnSubmit.textContent = "Atualizar";
         } else {
-            // Se não existe, limpa os campos de dados (exceto barcode) e garante que o botão diz "Salvar"
             setVal('product-id', '');
             setVal('product-name', '');
             setVal('product-category', '');
@@ -192,7 +234,6 @@ const stopScanner = async () => {
     }
 };
 
-// Checar duplicatas ou existência de preço
 const checkExistingPrice = async () => {
     const marketSelect = document.getElementById('price-market') as HTMLSelectElement;
     const productInput = document.getElementById('price-product-display') as HTMLInputElement;
@@ -250,15 +291,11 @@ const checkExistingPrice = async () => {
             if (displayInput) displayInput.value = product.name;
             if (categoryHidden) categoryHidden.value = product.category;
             showToast(`Identificado: ${product.name}`);
-            // Atualiza a visualização e checa se já tem preço cadastrado para esse produto no mercado selecionado
             (window as any).filterPriceList();
             await checkExistingPrice();
         } else {
-            // Se não encontrar o item no banco de dados
             if (confirm("Item não encontrado no banco de dados. Deseja cadastrar este novo item agora?")) {
-                // Direcionar para o cadastro de produtos
                 showView('admin-products');
-                // Preencher o campo de código de barras na tela de produtos automaticamente
                 setTimeout(() => {
                     const adminProductBarcode = document.getElementById('product-barcode') as HTMLInputElement;
                     if (adminProductBarcode) {
@@ -267,12 +304,10 @@ const checkExistingPrice = async () => {
                     }
                 }, 200);
             } else {
-                // Resetar os campos solicitados
                 if (barcodeInput) barcodeInput.value = "";
                 if (displayInput) displayInput.value = "";
                 if (priceInput) priceInput.value = "";
                 if (categoryHidden) categoryHidden.value = "";
-                // Manter o supermercado (price-market) intacto
                 (window as any).filterPriceList();
             }
         }
@@ -316,6 +351,7 @@ const showView = async (vId: string) => {
         if (vId === 'home') loadHome();
         if (vId === 'saved-lists') renderSavedLists();
         if (vId === 'build-list') loadBuildList();
+        if (vId === 'search-category') loadSearchCategory();
         if (vId === 'admin-users') renderAdminUsers();
         if (vId === 'admin-cities') renderAdminCities();
         if (vId === 'admin-markets') renderAdminMarkets();
@@ -339,7 +375,6 @@ async function renderApp() {
 
 (window as any).logout = () => { localStorage.removeItem('app_session'); location.reload(); };
 
-// --- AUTH ---
 const authForm = document.getElementById('form-auth');
 if (authForm) {
     authForm.onsubmit = async (e) => {
@@ -368,7 +403,6 @@ if (authForm) {
     if (mode === 'register') populateDropdown('auth-city', 'cities');
 };
 
-// --- LISTAS SALVAS ---
 async function renderSavedLists() {
     const container = document.getElementById('saved-lists-container');
     if (!container) return;
@@ -434,7 +468,6 @@ async function renderSavedLists() {
     } catch(e) { showToast("Erro ao carregar comparação"); }
 };
 
-// --- MONTAGEM DE LISTA ---
 function loadHome() {
     currentListId = null;
     shoppingList = [];
@@ -456,6 +489,15 @@ function loadBuildList() {
     document.getElementById('comparison-results')?.classList.add('hidden');
 }
 
+function loadSearchCategory() {
+    populateDropdown('search-category-select', 'categories');
+    const res = document.getElementById('search-category-results');
+    if (res) {
+        res.innerHTML = '';
+        res.classList.add('hidden');
+    }
+}
+
 (window as any).addItem = async () => {
     const pSel = document.getElementById('select-product') as HTMLSelectElement;
     const qIn = document.getElementById('select-quantity') as HTMLInputElement;
@@ -466,10 +508,8 @@ function loadBuildList() {
     const qty = parseInt(qIn?.value || "1") || 1;
 
     if (itemBeingEdited) {
-        // Modo Atualizar
         const idx = shoppingList.findIndex(i => i.name === itemBeingEdited);
         if (idx !== -1) {
-            // Se o produto mudou, remove o antigo e insere o novo (tratando duplicatas se necessário)
             if (prodName !== itemBeingEdited) {
                 shoppingList.splice(idx, 1);
                 const existing = shoppingList.find(i => i.name === prodName);
@@ -482,20 +522,17 @@ function loadBuildList() {
         itemBeingEdited = null;
         if (btn) btn.textContent = "Adicionar";
         
-        // Salva automaticamente se a lista já estiver nomeada
         const nameInput = document.getElementById('input-list-name') as HTMLInputElement;
         if (nameInput?.value.trim()) {
             await (window as any).saveList(true);
         }
         showToast("Item atualizado");
     } else {
-        // Modo Adicionar Padrão
         const existing = shoppingList.find(i => i.name === prodName);
         if (existing) existing.quantity += qty;
         else shoppingList.push({ name: prodName, quantity: qty });
     }
 
-    // Reset de campos
     if (qIn) qIn.value = "1";
     setVal('select-category', '');
     if (pSel) {
@@ -535,7 +572,6 @@ function updateListDisplay() {
             setVal('select-product', name);
             setVal('select-quantity', item.quantity);
             
-            // Ativa modo edição visual
             itemBeingEdited = name;
             const btn = document.getElementById('btn-add-item');
             if (btn) btn.textContent = "Atualizar";
@@ -576,7 +612,6 @@ function updateListDisplay() {
     } catch(e) { console.error(e); }
 };
 
-// --- COMPARAÇÃO ---
 (window as any).runComparison = async () => {
     const res = document.getElementById('comparison-results');
     if (!res) return;
@@ -587,7 +622,6 @@ function updateListDisplay() {
         let totals: any = {};
         markets.forEach(m => totals[m.name] = 0);
         
-        // Ocultar elementos de edição para mostrar "somente o painel"
         document.getElementById('build-list-header')?.classList.add('hidden');
         document.getElementById('build-list-main-content')?.classList.add('hidden');
 
@@ -602,7 +636,6 @@ function updateListDisplay() {
             <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-white text-[12px] font-bold uppercase text-slate-400"><tr><th class="p-4 whitespace-normal leading-tight">Lista</th><th class="p-4 text-center whitespace-normal leading-tight">Melhor<br>Preço</th>${markets.map((m, idx) => `<th class="p-4 text-center whitespace-normal leading-tight ${idx % 2 === 0 ? 'bg-slate-50/80' : ''}">${m.name}</th>`).join('')}</tr></thead><tbody class="text-sm">`;
         
         shoppingList.forEach(item => {
-            // Encontrar o menor preço para este item específico entre todos os mercados
             let itemLines: number[] = [];
             let itemUnitPrices: number[] = [];
             markets.forEach(m => {
@@ -643,7 +676,6 @@ function updateListDisplay() {
             html += `</tr>`;
         });
         
-        // Cálculo da economia total
         const validTotals = Object.values(totals).filter((v: any) => v > 0) as number[];
         const sumTotals = validTotals.reduce((a, b) => a + b, 0);
         const avgTotal = validTotals.length > 0 ? sumTotals / validTotals.length : 0;
@@ -704,9 +736,9 @@ async function renderAdminCategories() {
         <tr class="border-b hover:bg-slate-50 transition-colors"> 
             <td class="p-6 font-bold text-slate-800">${c.name}</td> 
             <td class="p-6 text-right">
-                <div class="flex flex-col items-end gap-2">
-                    <button onclick="editCategory('${c.id}')" class="text-blue-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Editar</button>
-                    <button onclick="deleteCategory('${c.id}')" class="text-red-600 font-bold text-[10px] uppercase tracking-wider hover:underline">Excluir</button>
+                <div class="flex flex-col items-end gap-1">
+                    <button onclick="editCategory('${c.id}')" class="text-blue-600 font-bold text-[10px] uppercase tracking-wider hover:underline">editar</button>
+                    <button onclick="deleteCategory('${c.id}')" class="text-red-600 font-bold text-[10px] uppercase tracking-wider hover:underline">excluir</button>
                 </div>
             </td> 
         </tr>`).join('');
@@ -804,7 +836,7 @@ const setupPriceForm = () => {
             product: productName, 
             price: priceVal, 
             category,
-            updated_at: new Date().toISOString() // Data de registro ou atualização
+            updated_at: new Date().toISOString()
         };
 
         try {
@@ -813,7 +845,6 @@ const setupPriceForm = () => {
             
             showToast(editId ? 'Preço atualizado!' : 'Preço salvo!');
             
-            // Reset parcial corrigido: limpa campos de produto/valor, mantém mercado
             const priceIdInput = document.getElementById('price-id') as HTMLInputElement;
             if (priceIdInput) {
                 priceIdInput.value = "";
@@ -838,8 +869,11 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
     f.onsubmit = async (e) => {
         e.preventDefault();
         const data: any = {};
-        let idBase = table === 'cities' ? 'city' : table.slice(0, -1);
+        
+        // CORREÇÃO: Mapeamento manual para tabelas que não seguem o padrão simplificado de plural/singular
+        let idBase = table === 'cities' ? 'city' : (table === 'categories' ? 'category' : table.slice(0, -1));
         if (id.includes('user')) idBase = 'user-admin';
+        
         const editId = (document.getElementById(`${idBase}-id`) as HTMLInputElement)?.value;
         fields.forEach(fid => {
             const el = document.getElementById(fid) as any;
@@ -849,12 +883,18 @@ const setupForm = (id: string, table: string, fields: string[], callback?: Funct
                 data[fid.split('-').pop()!] = val;
             }
         });
+        
         if (editId) await db.query(table, 'UPDATE', { id: editId, data });
         else await db.query(table, 'INSERT', data);
-        showToast('Sucesso!'); (e.target as HTMLFormElement).reset(); 
         
-        // Reset adicional para o botão do formulário de produto/categoria
-        if (id === 'form-product' || id === 'form-category') {
+        showToast('Sucesso!'); 
+        (e.target as HTMLFormElement).reset(); 
+        
+        if (id === 'form-product') {
+            const btnSubmit = f.querySelector('button[type="submit"]') as HTMLButtonElement;
+            if (btnSubmit) btnSubmit.textContent = "Salvar Produto";
+        }
+        if (id === 'form-category') {
             const btnSubmit = f.querySelector('button[type="submit"]') as HTMLButtonElement;
             if (btnSubmit) btnSubmit.textContent = "Salvar";
         }
@@ -883,20 +923,20 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     if (x) { 
         setVal('category-id', x.id); 
         setVal('category-name', x.name); 
-        const btnSubmit = document.querySelector('#form-category button[type="submit"]') as HTMLButtonElement;
-        if (btnSubmit) btnSubmit.textContent = "ATUALIZAR";
+        const btn = document.querySelector('#form-category button[type="submit"]') as HTMLButtonElement;
+        if (btn) btn.textContent = "ATUALIZAR";
     } 
 });
 
 (window as any).deleteCategory = async (id: any) => {
-    if (confirm('Tem certeza que deseja excluir esta categoria? Isso pode afetar produtos e preços vinculados.')) {
+    if (confirm('Deseja excluir esta categoria?')) {
         try {
             await db.query('categories', 'DELETE', id);
-            showToast('Categoria excluída!');
-            renderAdminCategories();
-        } catch (e) {
+            showToast('Excluída!');
+            await renderAdminCategories(); // Recarregar lista após exclusão
+        } catch(e) { 
             console.error(e);
-            showToast("Erro ao excluir categoria");
+            showToast("Erro ao excluir"); 
         }
     }
 };
@@ -918,7 +958,7 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
         try {
             await db.query('products', 'DELETE', id);
             showToast('Produto excluído!');
-            renderAdminProducts();
+            await renderAdminProducts();
         } catch (e) {
             console.error(e);
             showToast("Erro ao excluir produto");
@@ -946,7 +986,6 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     } 
 };
 
-// --- FUNÇÃO DE EXCLUSÃO CORRIGIDA ---
 (window as any).deletePrice = async (id: any) => {
     console.log("[Delete] Solicitando exclusão do ID:", id);
     if (!id || id === 'undefined' || id === 'null') {
@@ -957,17 +996,11 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     if (confirm('Tem certeza que deseja excluir este registro de preço permanentemente?')) {
         try {
             showToast("Excluindo...");
-            
-            // Chamar diretamente para garantir a execução
             await db.query('prices', 'DELETE', id);
-            
             showToast('Registro excluído!');
-            
-            // Recarregar a lista filtrada
             const m = (document.getElementById('price-market') as HTMLSelectElement)?.value || "";
             const p = (document.getElementById('price-product-display') as HTMLInputElement)?.value || "";
             renderAdminPrices(m, p);
-            
         } catch(e: any) { 
             console.error("[Delete Price Error]", e);
             alert("Erro ao excluir do banco de dados: " + (e.message || "Verifique sua conexão ou permissões."));
