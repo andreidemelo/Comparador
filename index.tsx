@@ -129,6 +129,8 @@ const startScanner = async (targetId: string = 'product-barcode') => {
         await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } }, (decodedText: string) => {
             const barcodeInput = document.getElementById(targetId) as HTMLInputElement;
             if (barcodeInput) {
+                // For barcode field on prices, remove readonly temporarily to set value if needed, 
+                // but setting .value via JS works even with readonly
                 barcodeInput.value = decodedText;
                 showToast("Código Identificado");
                 if (targetId === 'quick-search-barcode') (window as any).lookupBarcode(decodedText);
@@ -268,6 +270,37 @@ const checkExistingPrice = async () => {
     } catch (e) { console.error(e); }
 };
 
+// --- NOVA FUNCIONALIDADE: PREENCHIMENTO AUTOMÁTICO PELO NOME ---
+(window as any).onPriceProductNameChange = async () => {
+    const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
+    const barcodeInput = document.getElementById('price-barcode') as HTMLInputElement;
+    const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    const productName = displayInput.value.trim();
+
+    if (!productName) {
+        if (barcodeInput) barcodeInput.value = "";
+        if (categoryHidden) categoryHidden.value = "";
+        return;
+    }
+
+    try {
+        const products = await db.query('products', 'SELECT');
+        const product = products.find(p => p.name.trim().toLowerCase() === productName.toLowerCase());
+        
+        if (product) {
+            if (barcodeInput) barcodeInput.value = product.barcode || "";
+            if (categoryHidden) categoryHidden.value = product.category;
+            
+            // Sincronizar listagem e verificação de preço existente
+            (window as any).filterPriceList();
+            await checkExistingPrice();
+        } else {
+            // Se o usuário está digitando algo novo, apenas atualizamos a filtragem da tabela
+            (window as any).filterPriceList();
+        }
+    } catch (e) { console.error(e); }
+};
+
 (window as any).lookupBarcodeForPrice = async (barcode: string) => {
     const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
     const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
@@ -291,6 +324,8 @@ const checkExistingPrice = async () => {
             if (displayInput) displayInput.value = product.name;
             if (categoryHidden) categoryHidden.value = product.category;
             showToast(`Identificado: ${product.name}`);
+            
+            // Auto preencher e filtrar a lista com base no produto encontrado
             (window as any).filterPriceList();
             await checkExistingPrice();
         } else {
@@ -304,8 +339,8 @@ const checkExistingPrice = async () => {
                     }
                 }, 200);
             } else {
-                if (barcodeInput) barcodeInput.value = "";
-                if (displayInput) displayInput.value = "";
+                // Manter o barcode (foi lido por camera), mas limpar outros campos para nova entrada
+                if (displayInput) displayInput.value = ""; 
                 if (priceInput) priceInput.value = "";
                 if (categoryHidden) categoryHidden.value = "";
                 (window as any).filterPriceList();
@@ -764,28 +799,54 @@ async function renderAdminProducts() {
 (window as any).filterPriceList = () => {
     const m = (document.getElementById('price-market') as HTMLSelectElement)?.value || "";
     const p = (document.getElementById('price-product-display') as HTMLInputElement)?.value || "";
-    renderAdminPrices(m, p);
+    const c = (document.getElementById('price-category-filter') as HTMLSelectElement)?.value || "";
+    renderAdminPrices(m, p, c);
+    populateProductDatalist(c); // Sincroniza as sugestões de nomes de produtos
     checkExistingPrice(); 
 };
 
-async function renderAdminPrices(filterMarket = "", filterProduct = "") {
-    if (!filterMarket && !filterProduct) populateDropdown('price-market', 'markets');
+// --- NOVA FUNCIONALIDADE: POPULAR DATALIST DE PRODUTOS ---
+async function populateProductDatalist(categoryFilter = "") {
+    const datalist = document.getElementById('products-datalist');
+    if (!datalist) return;
+    
+    try {
+        const products = await db.query('products', 'SELECT');
+        const filtered = categoryFilter 
+            ? products.filter(p => p.category === categoryFilter)
+            : products;
+            
+        datalist.innerHTML = filtered.map(p => `<option value="${p.name}"></option>`).join('');
+    } catch (e) { console.error(e); }
+}
+
+async function renderAdminPrices(filterMarket = "", filterProduct = "", filterCategory = "") {
+    if (!filterMarket && !filterProduct && !filterCategory) {
+        populateDropdown('price-market', 'markets');
+        populateDropdown('price-category-filter', 'categories');
+        populateProductDatalist();
+    }
     
     const prcs = await db.query('prices', 'SELECT');
     const body = document.getElementById('table-prices-body');
     if (!body) return;
 
-    const filtered = prcs.filter(p => {
+    let filtered = prcs.filter(p => {
         const matchesM = filterMarket ? p.market === filterMarket : true;
         const matchesP = filterProduct ? p.product.toLowerCase().includes(filterProduct.toLowerCase()) : true;
-        return matchesM && matchesP;
+        const matchesC = filterCategory ? p.category === filterCategory : true;
+        return matchesM && matchesP && matchesC;
     });
+
+    // Ordenar a lista por preço (do menor para o maior)
+    filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
 
     body.innerHTML = filtered.map(p => `
         <tr class="border-b hover:bg-slate-50 transition-colors"> 
             <td class="p-3 md:p-6 font-bold text-emerald-600 text-xs md:text-sm">R$ ${formatPrice(p.price)}</td> 
             <td class="p-3 md:p-6 text-xs md:text-sm text-slate-500">${p.market}</td> 
             <td class="p-3 md:p-6 text-xs md:text-sm font-medium text-slate-800">${p.product}</td> 
+            <td class="p-3 md:p-6 text-xs md:text-sm text-slate-400 font-bold uppercase tracking-widest">${p.category || '-'}</td> 
             <td class="p-3 md:p-6 text-right">
                 <div class="flex flex-col items-end gap-2">
                     <button onclick="editPrice('${p.id}')" class="w-full md:w-auto bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider hover:bg-blue-100 transition-all">Alterar</button>
@@ -794,6 +855,37 @@ async function renderAdminPrices(filterMarket = "", filterProduct = "") {
             </td> 
         </tr>`).join('');
 }
+
+// --- NOVA FUNCIONALIDADE: PREENCHIMENTO AUTOMÁTICO PELO NOME ---
+(window as any).onPriceProductNameChange = async () => {
+    const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
+    const barcodeInput = document.getElementById('price-barcode') as HTMLInputElement;
+    const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    const productName = displayInput.value.trim();
+
+    if (!productName) {
+        if (barcodeInput) barcodeInput.value = "";
+        if (categoryHidden) categoryHidden.value = "";
+        return;
+    }
+
+    try {
+        const products = await db.query('products', 'SELECT');
+        const product = products.find(p => p.name.trim().toLowerCase() === productName.toLowerCase());
+        
+        if (product) {
+            if (barcodeInput) barcodeInput.value = product.barcode || "";
+            if (categoryHidden) categoryHidden.value = product.category;
+            
+            // Sincronizar listagem e verificação de preço existente
+            (window as any).filterPriceList();
+            await checkExistingPrice();
+        } else {
+            // Se o usuário está digitando algo novo, apenas atualizamos a filtragem da tabela
+            (window as any).filterPriceList();
+        }
+    } catch (e) { console.error(e); }
+};
 
 // --- FORMS E UTILS ---
 async function populateDropdown(id: string, table: string) {
@@ -1000,7 +1092,8 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
             showToast('Registro excluído!');
             const m = (document.getElementById('price-market') as HTMLSelectElement)?.value || "";
             const p = (document.getElementById('price-product-display') as HTMLInputElement)?.value || "";
-            renderAdminPrices(m, p);
+            const c = (document.getElementById('price-category-filter') as HTMLSelectElement)?.value || "";
+            renderAdminPrices(m, p, c);
         } catch(e: any) { 
             console.error("[Delete Price Error]", e);
             alert("Erro ao excluir do banco de dados: " + (e.message || "Verifique sua conexão ou permissões."));
@@ -1012,3 +1105,53 @@ setupForm('form-user-admin', 'users', ['user-admin-name', 'user-admin-email', 'u
     const x = data.find(i => i.id == id); 
     if (x) { setVal('user-admin-id', x.id); setVal('user-admin-name', x.name); setVal('user-admin-email', x.email || ''); setVal('user-admin-city', x.city || ''); setVal('user-admin-password', x.password); } 
 });
+
+(window as any).lookupBarcodeForPrice = async (barcode: string) => {
+    const displayInput = document.getElementById('price-product-display') as HTMLInputElement;
+    const categoryHidden = document.getElementById('price-category') as HTMLInputElement;
+    const barcodeInput = document.getElementById('price-barcode') as HTMLInputElement;
+    const priceInput = document.getElementById('price-price') as HTMLInputElement;
+    const barcodeTrimmed = barcode.trim();
+    
+    if (!barcodeTrimmed) { 
+        if (displayInput) displayInput.value = ""; 
+        if (categoryHidden) categoryHidden.value = "";
+        (window as any).filterPriceList();
+        checkExistingPrice();
+        return; 
+    }
+    
+    try {
+        const products = await db.query('products', 'SELECT');
+        const product = products.find(p => p.barcode && p.barcode.toString().trim() === barcodeTrimmed);
+        
+        if (product) {
+            if (displayInput) displayInput.value = product.name;
+            if (categoryHidden) categoryHidden.value = product.category;
+            showToast(`Identificado: ${product.name}`);
+            
+            // Auto preencher e filtrar a lista com base no produto encontrado
+            (window as any).filterPriceList();
+            await checkExistingPrice();
+        } else {
+            if (confirm("Item não encontrado no banco de dados. Deseja cadastrar este novo item agora?")) {
+                showView('admin-products');
+                setTimeout(() => {
+                    const adminProductBarcode = document.getElementById('product-barcode') as HTMLInputElement;
+                    if (adminProductBarcode) {
+                        adminProductBarcode.value = barcodeTrimmed;
+                        (window as any).checkBarcodeOnProductForm(barcodeTrimmed);
+                    }
+                }, 200);
+            } else {
+                // Manter o barcode (foi lido por camera), mas limpar outros campos para nova entrada
+                if (displayInput) displayInput.value = ""; 
+                if (priceInput) priceInput.value = "";
+                if (categoryHidden) categoryHidden.value = "";
+                (window as any).filterPriceList();
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao buscar produto por barcode:", e);
+    }
+};

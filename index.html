@@ -232,7 +232,7 @@
                 <div id="saved-lists-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
             </div>
 
-            <!-- NOVA TELA: PESQUISA POR CATEGORIA -->
+            <!-- PESQUISA POR CATEGORIA -->
             <div id="view-search-category" class="hidden animate-in space-y-8">
                 <div class="max-w-xl mx-auto space-y-8 text-center">
                     <h2 class="text-3xl font-black text-slate-900 tracking-tighter">Pesquisa por Tipo</h2>
@@ -404,23 +404,30 @@
                     <form id="form-price-custom" class="space-y-8">
                         <input type="hidden" id="price-id">
                         <input type="hidden" id="price-category">
-                        <div class="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 transition-all focus-within:border-green-brand/30">
-                            <label class="block text-[10px] font-black uppercase text-slate-400 mb-3 px-2 tracking-widest">Supermercado</label>
-                            <select id="price-market" onchange="filterPriceList()" class="w-full p-4 bg-white rounded-2xl outline-none text-sm font-bold border-none shadow-sm appearance-none" required></select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 transition-all focus-within:border-green-brand/30">
+                                <label class="block text-[10px] font-black uppercase text-slate-400 mb-3 px-2 tracking-widest">Supermercado</label>
+                                <select id="price-market" onchange="filterPriceList()" class="w-full p-4 bg-white rounded-2xl outline-none text-sm font-bold border-none shadow-sm appearance-none" required></select>
+                            </div>
+                            <div class="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 transition-all focus-within:border-green-brand/30">
+                                <label class="block text-[10px] font-black uppercase text-slate-400 mb-3 px-2 tracking-widest">Filtrar por Categoria</label>
+                                <select id="price-category-filter" onchange="filterPriceList()" class="w-full p-4 bg-white rounded-2xl outline-none text-sm font-bold border-none shadow-sm appearance-none"></select>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">CÓDIGO DE BARRAS</label>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">CÓDIGO DE BARRAS (Somente Câmera)</label>
                                 <div class="flex gap-2">
-                                    <input type="text" id="price-barcode" oninput="lookupBarcodeForPrice(this.value)" placeholder="Código de barras..." class="flex-1 p-5 input-minimal rounded-2xl outline-none text-sm font-bold">
+                                    <input type="text" id="price-barcode" readonly placeholder="Leia o código pela câmera..." class="flex-1 p-5 input-minimal rounded-2xl outline-none text-sm font-bold bg-slate-100 cursor-not-allowed">
                                     <button type="button" onclick="startScanner('price-barcode')" class="p-5 bg-emerald-50 text-green-brand rounded-2xl hover:bg-green-brand hover:text-white transition-all">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" /></svg>
                                     </button>
                                 </div>
                             </div>
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Nome do Produto</label>
-                                <input type="text" id="price-product-display" placeholder="Nome do item..." class="w-full p-5 input-minimal rounded-2xl outline-none text-sm font-bold shadow-sm" required>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 px-2 tracking-widest">Nome do Produto / Filtro</label>
+                                <input type="text" id="price-product-display" list="products-datalist" oninput="onPriceProductNameChange()" placeholder="Nome do item..." class="w-full p-5 input-minimal rounded-2xl outline-none text-sm font-bold shadow-sm" required>
+                                <datalist id="products-datalist"></datalist>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -433,7 +440,7 @@
                         <button type="submit" id="btn-save-price" class="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-green-brand transition-all hover:scale-[1.02]">Salvar Registro</button>
                     </form>
                 </div>
-                <div class="overflow-x-auto mt-12"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div>
+                <div class="overflow-x-auto mt-12"><table class="w-full bg-white rounded-2xl overflow-hidden shadow-sm"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-6 text-left">Preço</th><th class="p-6 text-left">Mercado</th><th class="p-6 text-left">Produto</th><th class="p-6 text-left">Categoria</th><th class="p-6 text-right">Ação</th></tr></thead><tbody id="table-prices-body" class="text-sm"></tbody></table></div>
             </div>
         </main>
     </div>
